@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Eröffnungen">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#131211">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<title>Eröffnungstrainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<style>
+/* Gleiche Marke wie das Trainingslog: warmes Anthrazit, Kreideweiß, ein roter Akzent. */
+:root{
+  --bg:#131211; --surface:#1c1a18; --sunk:#171514; --raise:#27231f; --ink:#f4f0ea; --muted:#a69e94; --line:#332f2a;
+  --accent:#ff5a36; --on-accent:#1b0a05; --good:#5cc48d; --warn:#e6b450; --bad:#ff5a36;
+  --sq-l:#d8cfc2; --sq-d:#7d7166; --pc-w:#fbf8f3; --pc-b:#1a1816;
+  --display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.4;
+  display:flex;flex-direction:column;-webkit-text-size-adjust:100%;overscroll-behavior:none}
+button{font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1,h2,h3,p{margin:0}
+[hidden]{display:none!important}
+
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:calc(10px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 10px calc(16px + env(safe-area-inset-left));
+  background:var(--surface);border-bottom:1px solid var(--line)}
+.brand{font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:.06em;text-transform:uppercase;line-height:1}
+.brand b{color:var(--accent)}
+.streak{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.streak b{color:var(--ink)}
+main{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.view{max-width:560px;margin:0 auto;padding:14px 16px 28px;display:flex;flex-direction:column;gap:14px}
+
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.tabs a{display:flex;flex-direction:column;align-items:center;gap:4px;padding:9px 4px 10px;text-decoration:none;color:var(--muted);
+  font-family:var(--display);font-weight:800;font-size:13px;letter-spacing:.1em;text-transform:uppercase;border-top:2px solid transparent;margin-top:-1px}
+.tabs a svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tabs a[aria-current="page"]{color:var(--ink);border-top-color:var(--accent)}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
+.sect{font-family:var(--display);font-weight:800;font-size:24px;letter-spacing:.05em;text-transform:uppercase;line-height:1}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.btn{border:0;border-radius:10px;padding:11px 16px;font-weight:600;background:var(--accent);color:var(--on-accent)}
+.btn.sec{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.btn:disabled{opacity:.4;cursor:default}
+.row{display:flex;gap:8px;align-items:center}
+.row.wrap{flex-wrap:wrap}
+.grow{flex:1}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--sunk)}
+.seg button{border:0;background:none;padding:8px 4px;font-size:13px;font-weight:500;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.tag{font-family:var(--display);font-weight:800;font-size:13px;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:6px;white-space:nowrap}
+.tag.w{background:var(--ink);color:var(--bg)}
+.tag.b{background:var(--bg);color:var(--ink);border:1px solid var(--muted)}
+
+/* Trainer */
+.trhead{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.trhead h1{font-family:var(--display);font-weight:800;font-size:38px;line-height:.95;letter-spacing:.02em;text-transform:uppercase;text-wrap:balance}
+.trhead .sub{color:var(--muted);font-size:13px;margin-top:4px}
+.meta{text-align:right;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.meta b{display:block;font-family:var(--display);font-weight:800;font-size:26px;line-height:1;color:var(--ink)}
+.dots{display:flex;gap:4px;flex-wrap:wrap}
+.dots i{width:9px;height:9px;border-radius:50%;background:var(--line)}
+.dots i.ok{background:var(--good)}.dots i.err{background:var(--warn)}.dots i.cur{background:var(--ink)}
+
+.boardwrap{position:relative;user-select:none;-webkit-user-select:none;touch-action:none}
+.boardwrap.shake{animation:shake .32s}
+@keyframes shake{20%{transform:translateX(-6px)}60%{transform:translateX(6px)}}
+.board{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(8,minmax(0,1fr));aspect-ratio:1;width:100%;border-radius:10px;overflow:hidden;border:1px solid var(--line)}
+.sq{position:relative;display:flex;align-items:center;justify-content:center}
+.sq.l{background:var(--sq-l)}.sq.d{background:var(--sq-d)}
+.sq.last::before{content:"";position:absolute;inset:0;background:rgba(255,90,54,.32)}
+.sq.sel::before{content:"";position:absolute;inset:0;background:rgba(255,90,54,.55)}
+.sq.hint::before{content:"";position:absolute;inset:0;box-shadow:inset 0 0 0 4px var(--warn);background:rgba(230,180,80,.35);animation:pulse 1.2s infinite}
+@keyframes pulse{50%{background:rgba(230,180,80,.1)}}
+.sq.wrong::before{content:"";position:absolute;inset:0;background:rgba(255,40,20,.6);animation:fade .7s forwards}
+.sq.right::before{content:"";position:absolute;inset:0;background:rgba(92,196,141,.6);animation:fade .8s forwards}
+@keyframes fade{to{opacity:0}}
+.sq.tgt::after{content:"";position:absolute;width:28%;height:28%;border-radius:50%;background:rgba(19,18,17,.28)}
+.sq.tgt.cap::after{width:88%;height:88%;background:none;border:5px solid rgba(19,18,17,.28)}
+.co{position:absolute;font-size:10px;font-weight:600;line-height:1;pointer-events:none}
+.co.f{right:3px;bottom:2px}.co.r{left:3px;top:3px}
+.sq.l .co{color:var(--sq-d)}.sq.d .co{color:var(--sq-l)}
+.pc{position:relative;z-index:1;font-family:"Apple Symbols","Segoe UI Symbol","DejaVu Sans","Noto Sans Symbols2",serif;
+  font-size:min(10.5vw,56px);line-height:1;pointer-events:none;transition:transform .22s ease}
+.pc.w{color:var(--pc-w);-webkit-text-stroke:1.3px #1a1816;paint-order:stroke fill;text-shadow:0 2px 2px rgba(0,0,0,.25)}
+.pc.b{color:var(--pc-b);-webkit-text-stroke:.6px #000;text-shadow:0 0 1px rgba(255,255,255,.35),0 2px 2px rgba(0,0,0,.25)}
+.pc.lift{opacity:.25}
+.drag{position:fixed;z-index:50;pointer-events:none;transform:translate(-50%,-60%) scale(1.15);transition:none}
+
+.msg{min-height:52px;display:flex;align-items:center;gap:10px;border-radius:12px;padding:10px 14px;background:var(--surface);border:1px solid var(--line);font-size:15px;font-weight:500}
+.msg i{flex:0 0 10px;height:10px;border-radius:50%;background:var(--muted)}
+.msg[data-k="ok"] i{background:var(--good)}
+.msg[data-k="err"]{border-color:var(--warn)}.msg[data-k="err"] i{background:var(--warn)}
+.msg[data-k="you"] i{background:var(--ink)}
+.idea{border-left:4px solid var(--accent);font-size:14px}
+.idea b{font-family:var(--display);font-weight:800;letter-spacing:.06em;text-transform:uppercase;font-size:14px;display:block;margin-bottom:2px}
+.ctrl{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.ctrl button{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:11px 4px;font-size:14px;font-weight:600}
+.ctrl button.hot{border-color:var(--warn);color:var(--warn)}
+.ctrl button:disabled{opacity:.35;cursor:default}
+.moves{font-size:14px;line-height:1.7;font-variant-numeric:tabular-nums;color:var(--muted)}
+.moves span{color:var(--ink);font-weight:600;white-space:nowrap}
+.moves span.e{color:var(--warn)}
+.done{border:2px solid var(--good)}
+.done.meh{border-color:var(--warn)}
+.done h2{font-family:var(--display);font-weight:800;font-size:30px;letter-spacing:.03em;text-transform:uppercase;line-height:1}
+.done .row{margin-top:12px}
+details summary{cursor:pointer;font-size:14px;color:var(--muted);list-style:none}
+details summary::-webkit-details-marker{display:none}
+details summary::before{content:"+ ";font-weight:600}
+details[open] summary::before{content:"– "}
+details p{font-size:14px;margin-top:6px}
+
+/* Liste */
+.op{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;align-items:center;text-align:left;width:100%;
+  background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.op h3{font-size:17px;font-weight:600;line-height:1.2}
+.op .s{font-size:13px;color:var(--muted)}
+.op .go{font-family:var(--display);font-weight:800;font-size:16px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.bar{grid-column:1/-1;display:flex;height:6px;border-radius:4px;overflow:hidden;background:var(--sunk)}
+.bar i{display:block;height:100%}
+.bar .m{background:var(--good)}.bar .l{background:var(--warn)}
+.mix{display:flex;justify-content:space-between;align-items:center;gap:12px;border:0;text-align:left;width:100%;
+  background:var(--accent);color:var(--on-accent);border-radius:14px;padding:16px}
+.mix b{display:block;font-family:var(--display);font-weight:800;font-size:28px;letter-spacing:.04em;text-transform:uppercase;line-height:1}
+.mix span{font-size:13px;font-weight:500}
+.mix .arr{font-family:var(--display);font-weight:800;font-size:34px}
+
+/* Fortschritt */
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 10px 8px}
+.tile b{display:block;font-family:var(--display);font-weight:800;font-size:32px;line-height:1;font-variant-numeric:tabular-nums}
+.tile span{font-size:12px;color:var(--muted)}
+.list{list-style:none;margin:0;padding:0}
+.list li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:10px 0;border-top:1px solid var(--line);font-size:14px}
+.list li:first-child{border-top:0}
+.list small{display:block;color:var(--muted);font-size:12px}
+.list .n{font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
+.link{border:0;background:none;padding:4px 0;color:var(--accent);font-weight:600;text-decoration:underline;text-underline-offset:3px;font-size:14px}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.danger{border:1px solid var(--line);background:none;border-radius:10px;padding:9px 12px;font-size:14px;color:var(--muted)}
+.danger[data-sure="1"]{border-color:var(--bad);color:var(--bad);font-weight:600}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">Eröffnungs<b>trainer</b></div>
+  <div class="streak" id="streak"></div>
+</header>
+<main id="main">
+  <section class="view" id="v-ueben"></section>
+  <section class="view" id="v-liste" hidden></section>
+  <section class="view" id="v-stats" hidden></section>
+</main>
+<nav class="tabs">
+  <a href="#ueben" data-v="ueben"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="2"/><path d="M3.5 12h17M12 3.5v17"/><rect x="3.5" y="3.5" width="8.5" height="8.5" fill="currentColor" stroke="none" opacity=".5"/><rect x="12" y="12" width="8.5" height="8.5" fill="currentColor" stroke="none" opacity=".5"/></svg>Üben</a>
+  <a href="#liste" data-v="liste"><svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>Eröffnungen</a>
+  <a href="#stats" data-v="stats"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Fortschritt</a>
+</nav>
+
+<script>
+/* ---------- Repertoire ----------
+   Züge in englischer SAN (für chess.js). {Text} nach einem Zug = Erklärung, die nach dem Zug erscheint.
+   Pro Stellung hat die eigene Seite genau einen Repertoirezug; der Gegner variiert über die Linien. */
+const OPENINGS=[
+{id:'ital',name:'Italienisch',sub:'Giuoco Pianissimo',side:'w',
+ idea:'Schnelle Entwicklung, Läufer auf c4 gegen f7. Mit c3 und d3 baust du ein solides Zentrum, rochierst und spielst später Te1, Lb3 und h3 mit langsamem Druck.',
+ lines:[
+ 'e4 e5 Nf3{Greift e5 an und entwickelt.} Nc6 Bc4{Der Läufer zielt auf f7 – den schwächsten Punkt von Schwarz.} Bc5 c3{Bereitet d3/d4 vor und gibt dem Läufer später c2.} Nf6 d3{Ruhiger Aufbau: e4 ist gedeckt, keine Schwächen.} d6 O-O O-O Re1 a6 Bb3{Rückzug vor ...b5 und ...Sa5.} Ba7 h3{Verhindert ...Lg4 und macht Platz für Sbd2-f1-g3.}',
+ 'e4 e5 Nf3 Nc6 Bc4 Bc5 c3 Nf6 d3 O-O O-O d6 Re1 a6 Bb3 Ba7 h3',
+ 'e4 e5 Nf3 Nc6 Bc4 Bc5 c3 d6 d3 Nf6 O-O O-O Re1 a6 Bb3 Ba7 h3',
+ 'e4 e5 Nf3 Nc6 Bc4 Nf6{Zweispringerspiel.} d3{Kein Abenteuer mit Sg5 – einfach e4 decken.} Be7 O-O O-O Re1 d6 c3{Typischer Aufbau, später Sbd2-f1.}',
+ 'e4 e5 Nf3 Nc6 Bc4 Nf6 d3 Bc5 c3 d6 O-O O-O Re1 a6 Bb3 Ba7 h3',
+ 'e4 e5 Nf3 Nc6 Bc4 Nf6 d3 d5 exd5 Nxd5 O-O Be7 Re1{Druck auf e5.}'
+ ]},
+{id:'span',name:'Spanisch',sub:'Ruy Lopez',side:'w',
+ idea:'Der Läufer auf b5 setzt den Verteidiger von e5 unter Druck. Klassischer Plan: kurze Rochade, Te1, c3 und d4 – mit dauerhaftem Zentrumsdruck.',
+ lines:[
+ 'e4 e5 Nf3 Nc6 Bb5{Greift den Verteidiger von e5 an.} a6 Ba4{Die Fesselung bleibt erhalten.} Nf6 O-O{e4 hängt nur scheinbar – Rochade zuerst.} Be7 Re1{Deckt e4 und bereitet c3/d4 vor.} b5 Bb3 d6 c3{Platz für den Läufer auf c2 und Vorbereitung von d4.} O-O h3{Verhindert ...Lg4 – Hauptlinie.}',
+ 'e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7 Re1 b5 Bb3 O-O c3 d5{Marshall-Angriff!} exd5 Nxd5 Nxe5 Nxe5 Rxe5 c6{Schwarz opfert einen Bauern für Angriff.}',
+ 'e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Nxe4{Offenes Spanisch.} d4{Das Zentrum öffnen, solange der Springer auf e4 steht.} b5 Bb3 d5 dxe5 Be6',
+ 'e4 e5 Nf3 Nc6 Bb5 Nf6{Berliner Verteidigung.} O-O Nxe4 d4 Nd6 Bxc6 dxc6 dxe5 Nf5 Qxd8+ Kxd8{Die berühmte Berliner Mauer: Damentausch, Schwarz verliert das Rochaderecht.}',
+ 'e4 e5 Nf3 Nc6 Bb5 a6 Ba4 d6 c3 Bd7 d4 Nf6 O-O',
+ 'e4 e5 Nf3 Nc6 Bb5 Bc5 O-O Nf6 c3 O-O d4 Bb6 Re1 d6 h3',
+ 'e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O b5 Bb3 Bc5 c3 d6 d4 Bb6'
+ ]},
+{id:'dg',name:'Damengambit',sub:'mit Weiß',side:'w',
+ idea:'c4 greift d5 an und kämpft um das Zentrum. Gegen das Abgelehnte entwickelst du mit Sc3, Lg5, e3 und Sf3; gegen Slawisch und Angenommenes holst du den Bauern ruhig zurück.',
+ lines:[
+ 'd4 d5 c4{Das Gambit: Angriff auf d5 von der Seite.} e6 Nc3 Nf6 Bg5{Fesselt den Springer, der d5 deckt.} Be7 e3 O-O Nf3 h6 Bh4 b6{Tartakower-Variante.} cxd5 Nxd5 Bxe7 Qxe7 Nxd5 exd5',
+ 'd4 d5 c4 e6 Nc3 Nf6 Bg5 Be7 e3 O-O Nf3 Nbd7 Rc1{Druck auf der c-Linie.} c6 Bd3 dxc4 Bxc4 Nd5',
+ 'd4 d5 c4 e6 Nc3 Be7 Nf3 Nf6 Bg5 O-O e3 h6 Bh4 b6',
+ 'd4 d5 c4 e6 Nc3 c5{Tarrasch-Verteidigung.} cxd5 exd5 Nf3 Nc6 g3{Der Läufer auf g2 drückt auf den isolierten d-Bauern.} Nf6 Bg2 Be7 O-O O-O',
+ 'd4 d5 c4 dxc4{Angenommenes Damengambit.} Nf3 Nf6 e3 e6 Bxc4{Bauer zurück, Läufer aktiv.} c5 O-O a6 dxc5 Qxd1 Rxd1 Bxc5',
+ 'd4 d5 c4 c6{Slawisch.} Nf3 Nf6 Nc3 dxc4 a4{Verhindert ...b5, mit dem Schwarz den Bauern halten würde.} Bf5 e3 e6 Bxc4 Bb4 O-O O-O Qe2',
+ 'd4 d5 c4 c6 Nf3 Nf6 Nc3 e6 Bg5 h6 Bxf6 Qxf6 e3 Nd7 Bd3'
+ ]},
+{id:'lon',name:'Londoner System',sub:'mit Weiß',side:'w',
+ idea:'Ein Aufbau gegen fast alles: d4, Lf4, e3, c3, Sd2, Sf3, Ld3. Wenig Theorie, klare Pläne – oft folgt später Se5 oder ein Königsangriff.',
+ lines:[
+ 'd4 d5 Bf4{Der Läufer kommt vor e3 heraus.} Nf6 e3 c5 c3{Stabilisiert d4 und deckt b2 indirekt.} Nc6 Nd2 e6 Ngf3 Bd6 Bg3{Läufer behalten – Abtausch auf g3 öffnet dir die h-Linie.} O-O Bd3',
+ 'd4 d5 Bf4 Nf6 e3 e6 Nf3 Bd6 Bg3 O-O Bd3 c5 c3 Nc6 Nbd2',
+ 'd4 d5 Bf4 c5 e3 Nc6 c3 Nf6 Nd2 e6 Ngf3 Bd6 Bg3 O-O Bd3',
+ 'd4 d5 Bf4 Nf6 e3 c5 c3 Qb6{Angriff auf b2.} Qb3{Damentausch anbieten – b2 ist gedeckt.} c4 Qc2',
+ 'd4 d5 Bf4 Bf5 e3 e6 c4{Gegen den gespiegelten Aufbau aktiv mit c4.} Bb4+ Nc3 Nf6 Nf3',
+ 'd4 Nf6 Bf4 g6 e3 Bg7 Nf3 O-O Be2 d6 h3{Rückzugsfeld für den Läufer auf h2.} c5 c3',
+ 'd4 Nf6 Bf4 e6 e3 c5 c3 d5 Nd2 Nc6 Ngf3 Bd6 Bg3 O-O Bd3'
+ ]},
+{id:'sizi',name:'Sizilianisch',sub:'Najdorf',side:'b',
+ idea:'Mit 1...c5 kämpfst du asymmetrisch um d4. Im Najdorf verhindert 5...a6 Figuren auf b5 und bereitet ...e5 oder ...e6 sowie ...b5 vor.',
+ lines:[
+ 'e4 c5{Kontrolliert d4 von der Seite – unausgeglichene Stellung.} Nf3 d6 d4 cxd4{Flügelbauer gegen Zentrumsbauer – gutes Geschäft.} Nxd4 Nf6{Greift e4 an und zwingt Sc3.} Nc3 a6{Najdorf: kontrolliert b5, flexibel.} Be3 e5 Nb3 Be6 f3 Be7 Qd2 O-O',
+ 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Bg5 e6{Gegen Lg5 ist ...e6 am solidesten.} f4 Be7 Qf3 Qc7 O-O-O Nbd7',
+ 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be2 e5{Vertreibt den Springer, gewinnt Raum.} Nb3 Be7 O-O O-O',
+ 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Bc4 e6{Schließt die Diagonale a2-g8.} Bb3 b5 O-O Be7',
+ 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 f3 e5 Nb3 Be6 Be3 Be7 Qd2 O-O',
+ 'e4 c5 Nf3 d6 d4 cxd4 Qxd4 Nc6{Entwicklung mit Tempo gegen die Dame.} Bb5 Bd7 Bxc6 Bxc6 Nc3 Nf6 Bg5 e6',
+ 'e4 c5 Nf3 d6 Bb5+ Bd7 Bxd7+ Qxd7 O-O Nc6 c3 Nf6 Re1 e6 d4 cxd4 cxd4 d5',
+ 'e4 c5 c3{Alapin.} Nf6{Greift e4 sofort an.} e5 Nd5 d4 cxd4 Nf3 Nc6 cxd4 d6',
+ 'e4 c5 Nc3{Geschlossenes Sizilianisch.} Nc6 g3 g6 Bg2 Bg7 d3 d6'
+ ]},
+{id:'franz',name:'Französisch',sub:'mit Schwarz',side:'b',
+ idea:'1...e6 und 2...d5: solide, aber mit Gegenspiel. Weiß bekommt Raum, du greifst die Bauernkette mit ...c5 und ...f6 an. Problemkind ist der Läufer c8.',
+ lines:[
+ 'e4 e6 d4 d5{Greift e4 an, gedeckt durch e6.} Nc3 Nf6 Bg5 Be7{Entfesselt den Springer.} e5 Nfd7 Bxe7 Qxe7 f4 O-O Nf3 c5{Der typische Hebel gegen d4.}',
+ 'e4 e6 d4 d5 Nc3 Nf6 e5{Steinitz-Variante.} Nfd7 f4 c5 Nf3 Nc6 Be3 cxd4 Nxd4 Bc5 Qd2 O-O',
+ 'e4 e6 d4 d5 Nc3 Nf6 Bg5 Be7 Bxf6 Bxf6 e5 Be7 Qg4 O-O',
+ 'e4 e6 d4 d5 e5{Vorstoßvariante.} c5{Sofort die Basis der Kette angreifen.} c3 Nc6 Nf3 Qb6{Druck auf d4 und b2.} Be2 cxd4 cxd4 Nge7 Na3 Nf5 Nc2',
+ 'e4 e6 d4 d5 e5 c5 c3 Nc6 Nf3 Qb6 Bd3 cxd4 cxd4 Bd7 O-O Nxd4{Der Milner-Barry-Bauer darf genommen werden.} Nxd4 Qxd4',
+ 'e4 e6 d4 d5 e5 c5 c3 Nc6 Nf3 Qb6 a3 c4{Schließt den Damenflügel, Sa5-b3 folgt.} Nbd2 Na5',
+ 'e4 e6 d4 d5 Nd2{Tarrasch-Variante.} Nf6 e5 Nfd7 Bd3 c5 c3 Nc6 Ne2 cxd4 cxd4 f6{Zweiter Hebel – gegen e5.}',
+ 'e4 e6 d4 d5 exd5{Abtauschvariante.} exd5 Nf3 Nf6 Bd3 Bd6 O-O O-O Bg5 Bg4',
+ 'e4 e6 d3 d5 Nd2 Nf6 Ngf3 c5 g3 Nc6 Bg2 Be7 O-O O-O'
+ ]},
+{id:'caro',name:'Caro-Kann',sub:'mit Schwarz',side:'b',
+ idea:'1...c6 bereitet ...d5 vor, ohne den Läufer c8 einzusperren. Er kommt nach f5 oder g4 heraus, erst danach folgt ...e6. Sehr solide.',
+ lines:[
+ 'e4 c6 d4 d5 Nc3 dxe4 Nxe4 Bf5{Der Läufer kommt vor ...e6 heraus.} Ng3 Bg6 h4 h6{Platz für den Läufer schaffen.} Nf3 Nd7 h5 Bh7 Bd3 Bxd3 Qxd3 e6',
+ 'e4 c6 d4 d5 Nd2 dxe4 Nxe4 Bf5 Ng3 Bg6 Nf3 Nd7 h4 h6 h5 Bh7 Bd3 Bxd3 Qxd3 e6',
+ 'e4 c6 d4 d5 e5{Vorstoßvariante.} Bf5 Nf3 e6 Be2 c5{Angriff auf die Basis d4.} Be3 Nd7 O-O Ne7',
+ 'e4 c6 d4 d5 e5 Bf5 Nc3 e6 g4 Bg6 Nge2 c5 h4 h5',
+ 'e4 c6 d4 d5 e5 Bf5 Bd3 Bxd3 Qxd3 e6 Nf3 Qb6',
+ 'e4 c6 d4 d5 exd5 cxd5 Bd3 Nc6 c3 Nf6 Bf4 Bg4{Aktiv – der Läufer kommt vor ...e6 heraus.} Qb3 Qd7',
+ 'e4 c6 d4 d5 exd5 cxd5 c4{Panow-Angriff.} Nf6 Nc3 e6 Nf3 Be7',
+ 'e4 c6 Nc3 d5 Nf3 Bg4 h3 Bxf3 Qxf3 e6',
+ 'e4 c6 d3 d5 Nd2 e5 Ngf3 Bd6 g3 Nf6 Bg2 O-O O-O'
+ ]},
+{id:'e5b',name:'1.e4 e5',sub:'mit Schwarz',side:'b',
+ idea:'Der Klassiker: symmetrisch ins Zentrum. Schnell Springer und Läufer entwickeln, rochieren, e5 halten. Gegen Italienisch …Lc5, gegen Spanisch die Hauptlinie mit …a6.',
+ lines:[
+ 'e4 e5 Nf3 Nc6{Deckt e5 und entwickelt.} Bc4 Bc5 c3 Nf6{Gegenangriff auf e4.} d3 d6 O-O O-O Re1 a6{Rückzugsfeld für den Läufer.} Bb3 Ba7',
+ 'e4 e5 Nf3 Nc6 Bc4 Bc5 c3 Nf6 d4 exd4 cxd4 Bb4+{Zwischenschach!} Bd2 Bxd2+ Nbxd2 d5{Das weiße Zentrum sofort aufbrechen.} exd5 Nxd5',
+ 'e4 e5 Nf3 Nc6 Bc4 Bc5 O-O Nf6 d3 d6 c3 O-O',
+ 'e4 e5 Nf3 Nc6 Bc4 Bc5 b4{Evans-Gambit.} Bxb4 c3 Ba5 d4 exd4 O-O Nge7',
+ 'e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7 Re1 b5 Bb3 d6 c3 O-O h3 Nb8{Breyer: der Springer geht über d7 neu.}',
+ 'e4 e5 Nf3 Nc6 Bb5 a6 Bxc6 dxc6{Zum Zentrum hin schlagen, Läuferpaar.} O-O f6 d4 exd4 Nxd4 c5 Nb3 Qxd1 Rxd1 Bg4',
+ 'e4 e5 Nf3 Nc6 d4{Schottisch.} exd4 Nxd4 Bc5 Be3 Qf6 c3 Nge7',
+ 'e4 e5 Nf3 Nc6 Nc3 Nf6 Bb5 Bb4 O-O O-O d3 d6',
+ 'e4 e5 Nc3 Nf6 f4 d5{Gegenschlag im Zentrum.} fxe5 Nxe4 Nf3 Be7',
+ 'e4 e5 Bc4 Nf6 d3 c6 Nf3 d5 Bb3 Bd6'
+ ]},
+{id:'dgb',name:'Damengambit abgelehnt',sub:'mit Schwarz',side:'b',
+ idea:'Gegen 1.d4 hältst du d5 mit ...e6, entwickelst ...Sf6, ...Le7, rochierst und befreist dich später mit ...c5 oder ...dxc4 nebst ...c5/...e5.',
+ lines:[
+ 'd4 d5 c4 e6{Hält d5 stabil.} Nc3 Nf6 Bg5 Be7{Entfesselt den Springer.} e3 O-O Nf3 h6 Bh4 b6{Tartakower: der Läufer kommt nach b7.} cxd5 Nxd5 Bxe7 Qxe7 Nxd5 exd5',
+ 'd4 d5 c4 e6 Nc3 Nf6 Bg5 Be7 e3 O-O Nf3 h6 Bxf6 Bxf6 Rc1 c6',
+ 'd4 d5 c4 e6 Nc3 Nf6 Bg5 Be7 Nf3 O-O e3 h6 Bh4 b6',
+ 'd4 d5 c4 e6 Nc3 Nf6 cxd5{Abtauschvariante.} exd5 Bg5 Be7 e3 c6 Bd3 Nbd7 Qc2 O-O',
+ 'd4 d5 c4 e6 Nc3 Nf6 Nf3 Be7 Bg5 O-O e3 h6 Bh4 b6',
+ 'd4 d5 c4 e6 Nf3 Nf6 g3{Katalanisch.} Be7 Bg2 O-O O-O dxc4{Bauer nehmen und mit ...a6/...b5 Zeit gewinnen.} Qc2 a6 Qxc4 b5 Qc2 Bb7',
+ 'd4 d5 c4 e6 Nf3 Nf6 Nc3 Be7 Bf4 O-O e3 c5 dxc5 Bxc5',
+ 'd4 d5 Nf3 Nf6 c4 e6 Nc3 Be7 Bg5 O-O e3 h6 Bh4 b6',
+ 'd4 d5 Bf4 Nf6 e3 c5{Gegen London sofort ...c5.} c3 Nc6 Nd2 e6 Ngf3 Bd6 Bg3 O-O'
+ ]}
+];
+
+/* ---------- Aufbereitung + Prüfung ---------- */
+const OP={};
+OPENINGS.forEach(o=>{
+  o.L=[];
+  o.lines.forEach(src=>{
+    const toks=src.match(/\{[^}]*\}|[^\s{]+/g)||[];
+    const moves=[],notes=[];
+    toks.forEach(t=>{ if(t[0]==='{'){notes[moves.length-1]=t.slice(1,-1)} else moves.push(t) });
+    const g=new Chess();
+    for(let i=0;i<moves.length;i++){
+      const m=g.move(moves[i]);
+      if(!m){console.error('Illegaler Zug',o.id,i,moves[i],src);return}
+      moves[i]=m.san;
+    }
+    o.L.push({op:o.id,key:o.id+':'+moves.join(' '),moves,notes});
+  });
+  OP[o.id]=o;
+});
+
+/* ---------- Speicher ---------- */
+const SK='eroeffnungstrainer-v1';
+let P={lines:{},pos:{},days:{},tot:{ok:0,err:0}};
+try{const s=JSON.parse(localStorage.getItem(SK)||'null');if(s&&s.lines)P=Object.assign(P,s)}catch(e){}
+function save(){try{localStorage.setItem(SK,JSON.stringify(P))}catch(e){}}
+const today=()=>new Date().toISOString().slice(0,10);
+const LS=k=>P.lines[k]||{box:0,seen:0,perfect:0,last:0};
+
+/* ---------- Helfer ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const de=san=>san.replace(/[NBRQ]/g,c=>({N:'S',B:'L',R:'T',Q:'D'}[c]));
+const PNAME={p:'Bauern',n:'Springer',b:'Läufer',r:'Turm',q:'Damen',k:'Königs'};
+const GLYPH={k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟'};
+function moveText(moves,errIdx){
+  return moves.map((m,i)=>(i%2===0?(i/2+1)+'.':'')+'<span'+(errIdx&&errIdx.has(i)?' class="e"':'')+'>'+esc(de(m))+'</span>').join(' ');
+}
+function mastery(lines){
+  let m=0,l=0;lines.forEach(x=>{const b=LS(x.key).box;if(b>=3)m++;else if(LS(x.key).seen)l++});
+  return {m,l,n:lines.length};
+}
+
+/* ---------- Trainer-Zustand ---------- */
+const T={mode:null,pool:[],line:null,game:new Chess(),ply:0,side:'w',
+  lineErr:0,hintUsed:false,shown:false,errHere:0,hintLvl:0,errAt:new Set(),
+  sel:null,last:null,busy:false,finished:false,count:0,prevKey:null,msg:null,notes:[]};
+
+function pick(pool){
+  const now=Date.now();
+  // niedrige Stufe zuerst; gerade gespielte Linien etwas nach hinten; Zufall gegen Monotonie
+  const scored=pool.map(l=>{const s=LS(l.key);return {l,score:s.box*10+(s.last&&now-s.last<6e5?4:0)+Math.random()*3}});
+  scored.sort((a,b)=>a.score-b.score);
+  let c=scored[0].l;
+  if(c.key===T.prevKey&&scored.length>1)c=scored[1].l;
+  return c;
+}
+function startMode(mode){
+  T.mode=mode;
+  T.pool=mode==='mix'?OPENINGS.flatMap(o=>o.L):OP[mode].L;
+  T.count=0;
+  try{localStorage.setItem(SK+'-mode',mode)}catch(e){}
+  nextLine();
+  if(location.hash!=='#ueben')location.hash='#ueben';else route();
+}
+function nextLine(line){
+  T.line=line||pick(T.pool);
+  T.prevKey=T.line.key;
+  T.side=OP[T.line.op].side;
+  T.game.reset();T.ply=0;T.lineErr=0;T.hintUsed=false;T.shown=false;T.errHere=0;T.hintLvl=0;T.errAt=new Set();
+  T.sel=null;T.last=null;T.finished=false;T.busy=false;T.notes=[];
+  T.count++;
+  T.msg={k:'',t:T.side==='w'?'Du hast Weiß. Finde den ersten Zug.':'Du hast Schwarz. Weiß beginnt …'};
+  renderTrainer();
+  opponent();
+}
+function bookMoves(){
+  // alle eigenen Repertoirezüge in dieser Stellung (über alle Linien derselben Eröffnung)
+  const h=T.game.history();const set=new Map();
+  OP[T.line.op].L.forEach(l=>{
+    if(l.moves.length>h.length&&h.every((m,i)=>l.moves[i]===m)){if(!set.has(l.moves[h.length]))set.set(l.moves[h.length],l)}
+  });
+  return set;
+}
+function expected(){return T.line.moves[T.ply]}
+function userTurn(){return !T.finished&&T.game.turn()===T.side&&T.ply<T.line.moves.length}
+
+function opponent(){
+  if(T.ply>=T.line.moves.length){finish();return}
+  if(T.game.turn()===T.side){renderTrainer();return}
+  T.busy=true;
+  setTimeout(()=>{
+    const san=expected();
+    animateMove(san,()=>{
+      const m=T.game.move(san);T.last=[m.from,m.to];T.ply++;
+      const n=T.line.notes[T.ply-1];
+      if(n)T.notes.push({who:'Gegner',san:m.san,t:n});
+      T.busy=false;
+      if(T.ply>=T.line.moves.length){finish();return}
+      T.msg={k:'you',t:'Gegner spielt '+de(m.san)+'. Dein Zug.'};
+      renderTrainer();
+    });
+  },T.ply===0?650:420);
+}
+
+function tryMove(from,to){
+  if(!userTurn()||T.busy)return;
+  const m=T.game.move({from,to,promotion:'q'});
+  if(!m){T.sel=null;renderBoard();return}
+  T.game.undo();
+  const book=bookMoves();
+  const pk=T.line.op+'|'+T.game.fen().split(' ').slice(0,4).join(' ');
+  P.pos[pk]=P.pos[pk]||{err:0,ok:0,op:T.line.op,h:T.game.history()};
+  if(book.has(m.san)){
+    if(expected()!==m.san){ // anderer Buchzug -> passende Linie übernehmen
+      const alt=OP[T.line.op].L.filter(l=>{const h=T.game.history();return l.moves.length>h.length&&h.every((x,i)=>l.moves[i]===x)&&l.moves[h.length]===m.san});
+      T.line=pick(alt);
+    }
+    T.game.move(m.san);T.last=[m.from,m.to];T.ply++;T.sel=null;
+    P.pos[pk].ok++;P.tot.ok++;
+    const n=T.line.notes[T.ply-1];
+    T.notes=n?[{who:'Du',san:m.san,t:n}]:[];
+    T.msg={k:'ok',t:(T.errHere?'Jetzt stimmt’s: ':'Richtig: ')+de(m.san)};
+    T.errHere=0;T.hintLvl=0;
+    save();
+    renderTrainer();flash(m.to,'right');
+    opponent();
+  }else{
+    T.lineErr++;T.errHere++;T.errAt.add(T.ply);
+    P.pos[pk].err++;P.tot.err++;save();
+    T.sel=null;
+    const exp=T.game.move(expected());T.game.undo();
+    const lvl=Math.min(3,T.errHere);
+    T.hintLvl=Math.max(T.hintLvl,lvl>=2?lvl-1:0);
+    const t=T.errHere===1?de(m.san)+' ist nicht die Theorie hier. Nochmal!'
+      :T.errHere===2?'Auch nicht. Tipp: Gesucht ist ein '+PNAME[exp.piece]+'zug.'
+      :T.errHere===3?'Die richtige Figur ist jetzt markiert.'
+      :'Noch nicht – du kannst dir den Zug zeigen lassen.';
+    T.msg={k:'err',t};
+    renderTrainer();flash(to,'wrong');
+    const bw=$('.boardwrap');bw.classList.remove('shake');void bw.offsetWidth;bw.classList.add('shake');
+  }
+}
+function hint(){
+  if(!userTurn())return;
+  T.hintUsed=true;
+  T.hintLvl=Math.min(2,T.hintLvl+1);
+  const exp=T.game.move(expected());T.game.undo();
+  T.msg={k:'err',t:T.hintLvl===1?'Tipp: Gesucht ist ein '+PNAME[exp.piece]+'zug.':'Tipp: Diese Figur ist dran.'};
+  renderTrainer();
+}
+function show(){
+  if(!userTurn()||T.busy)return;
+  T.shown=true;T.errAt.add(T.ply);T.busy=true;
+  const san=expected();
+  animateMove(san,()=>{
+    const m=T.game.move(san);T.last=[m.from,m.to];T.ply++;T.busy=false;
+    const n=T.line.notes[T.ply-1];
+    T.notes=n?[{who:'Lösung',san:m.san,t:n}]:[];
+    T.msg={k:'err',t:'Der Zug war '+de(m.san)+'. Merk ihn dir – die Linie kommt bald wieder.'};
+    T.errHere=0;T.hintLvl=0;
+    renderTrainer();
+    opponent();
+  });
+}
+function finish(){
+  T.finished=true;
+  const s=Object.assign({},LS(T.line.key));
+  const perfect=T.lineErr===0&&!T.hintUsed&&!T.shown;
+  s.seen++;s.last=Date.now();
+  if(perfect){s.box=Math.min(5,s.box+1);s.perfect++}
+  else s.box=T.shown?0:Math.max(0,s.box-1);
+  P.lines[T.line.key]=s;
+  const d=today();P.days[d]=(P.days[d]||0)+1;
+  save();
+  T.result={perfect,box:s.box};
+  renderTrainer();
+  setTimeout(()=>{const d=$('.done');if(d)d.scrollIntoView({behavior:'smooth',block:'center'})},250);
+}
+
+/* ---------- Brett ---------- */
+const FILES='abcdefgh';
+function squares(){
+  const out=[];
+  for(let r=0;r<8;r++)for(let f=0;f<8;f++){
+    const rank=T.side==='w'?8-r:r+1, file=T.side==='w'?f:7-f;
+    out.push(FILES[file]+rank);
+  }
+  return out;
+}
+function renderBoard(){
+  const el=$('#board');if(!el)return;
+  const g=T.game, sqs=squares();
+  let hintSq=null;
+  if(userTurn()&&T.hintLvl>=2){const e=g.move(expected());g.undo();hintSq=e.from}
+  const tg=new Map();
+  if(T.sel)g.moves({square:T.sel,verbose:true}).forEach(m=>tg.set(m.to,!!m.captured));
+  el.innerHTML=sqs.map((s,i)=>{
+    const fi=FILES.indexOf(s[0]),ri=+s[1];
+    const light=(fi+ri)%2===1;
+    const p=g.get(s);
+    let c='sq '+(light?'l':'d');
+    if(T.last&&T.last.includes(s))c+=' last';
+    if(T.sel===s)c+=' sel';
+    if(hintSq===s)c+=' hint';
+    if(tg.has(s))c+=' tgt'+(tg.get(s)?' cap':'');
+    const col=i%8, row=Math.floor(i/8);
+    return '<div class="'+c+'" data-s="'+s+'">'+
+      (row===7?'<span class="co f">'+s[0]+'</span>':'')+(col===0?'<span class="co r">'+s[1]+'</span>':'')+
+      (p?'<span class="pc '+p.color+'">'+GLYPH[p.type]+'︎</span>':'')+'</div>';
+  }).join('');
+}
+function sqEl(s){return document.querySelector('.sq[data-s="'+s+'"]')}
+function flash(s,k){const e=sqEl(s);if(!e)return;e.classList.add(k);setTimeout(()=>e.classList.remove(k),900)}
+function animateMove(san,done){
+  const m=T.game.move(san);T.game.undo();
+  const a=sqEl(m.from),b=sqEl(m.to);
+  const pc=a&&a.querySelector('.pc');
+  if(!pc||!b){done();return}
+  const ra=a.getBoundingClientRect(),rb=b.getBoundingClientRect();
+  pc.style.transform='translate('+(rb.left-ra.left)+'px,'+(rb.top-ra.top)+'px)';
+  pc.style.zIndex=5;
+  setTimeout(done,240);
+}
+function squareAt(x,y){
+  const el=$('#board');if(!el)return null;
+  const r=el.getBoundingClientRect();
+  if(x<r.left||y<r.top||x>=r.right||y>=r.bottom)return null;
+  const c=Math.floor((x-r.left)/r.width*8),w=Math.floor((y-r.top)/r.height*8);
+  return squares()[w*8+c];
+}
+let drag=null;
+function onDown(e){
+  const s=squareAt(e.clientX,e.clientY);if(!s||!userTurn()||T.busy)return;
+  const p=T.game.get(s);
+  if(T.sel&&s!==T.sel&&!(p&&p.color===T.side)){tryMove(T.sel,s);return}
+  if(!p||p.color!==T.side){T.sel=null;renderBoard();return}
+  e.preventDefault();
+  const wasSel=T.sel===s;
+  T.sel=s;renderBoard();
+  const src=sqEl(s).querySelector('.pc');
+  const ghost=src.cloneNode(true);ghost.classList.add('drag');
+  ghost.style.fontSize=getComputedStyle(src).fontSize;
+  ghost.style.left=e.clientX+'px';ghost.style.top=e.clientY+'px';
+  document.body.appendChild(ghost);src.classList.add('lift');
+  drag={from:s,ghost,src,wasSel,moved:false,x:e.clientX,y:e.clientY};
+}
+window.addEventListener('pointermove',e=>onMove(e));
+window.addEventListener('pointerup',e=>onUp(e));
+window.addEventListener('pointercancel',e=>onUp(e));
+function onMove(e){
+  if(!drag)return;
+  if(Math.abs(e.clientX-drag.x)+Math.abs(e.clientY-drag.y)>6)drag.moved=true;
+  drag.ghost.style.left=e.clientX+'px';drag.ghost.style.top=e.clientY+'px';
+}
+function onUp(e){
+  if(!drag)return;
+  const d=drag;drag=null;d.ghost.remove();d.src.classList.remove('lift');
+  const s=squareAt(e.clientX,e.clientY);
+  if(s&&s!==d.from){tryMove(d.from,s);return}
+  if(!d.moved&&d.wasSel){T.sel=null}
+  renderBoard();
+}
+
+/* ---------- Ansichten ---------- */
+function renderTrainer(){
+  const v=$('#v-ueben');
+  if(!T.line){
+    v.innerHTML='<div class="trhead"><div><h1>Bereit?</h1><p class="sub">Wähle eine Eröffnung oder trainiere alles gemischt.</p></div></div>'+
+      mixButton()+'<button class="btn sec" onclick="location.hash=\'#liste\'">Eröffnung auswählen</button>'+
+      '<div class="card idea"><b>So funktioniert’s</b>Du spielst deine Seite, die App den Gegner – immer aus echter Theorie. Kein Zug wird vorgesagt: Probier aus. Bei Fehlern springt die Figur zurück; nach dem zweiten Versuch gibt es einen Tipp, nach dem dritten wird die Figur markiert. Linien, die du fehlerfrei spielst, kommen seltener, wackelige öfter.</div>';
+    return;
+  }
+  const o=OP[T.line.op];
+  const st=LS(T.line.key);
+  const userPlies=[];for(let i=T.side==='w'?0:1;i<T.line.moves.length;i+=2)userPlies.push(i);
+  const dots=userPlies.map(i=>'<i class="'+(i<T.ply?(T.errAt.has(i)?'err':'ok'):(i===T.ply&&!T.finished?'cur':''))+'"></i>').join('');
+  let bottom='';
+  if(T.finished){
+    const r=T.result;
+    bottom='<div class="card done'+(r.perfect?'':' meh')+'"><h2>'+(r.perfect?'Fehlerfrei!':'Linie geschafft')+'</h2>'+
+      '<p class="small muted" style="margin-top:6px">'+(r.perfect?'Die Linie rückt auf Stufe '+r.box+' von 5 und kommt seltener dran.':(T.shown?'Mit Lösung – die Linie kommt bald wieder.':T.lineErr+' Fehlversuch'+(T.lineErr===1?'':'e')+' – sie kommt öfter dran, bis sie sitzt.'))+'</p>'+
+      '<div class="row"><button class="btn grow" id="b-next">Nächste Linie</button><button class="btn sec" id="b-again">Nochmal</button></div></div>';
+  }else{
+    const hot=T.errHere>=3;
+    bottom='<div class="ctrl"><button id="b-hint"'+(userTurn()&&!T.busy&&T.hintLvl<2?'':' disabled')+'>Tipp</button>'+
+      '<button id="b-show" class="'+(hot?'hot':'')+'"'+(userTurn()&&!T.busy?'':' disabled')+'>Zug zeigen</button>'+
+      '<button id="b-skip">Andere Linie</button></div>';
+  }
+  v.innerHTML=
+    '<div class="trhead"><div><span class="tag '+o.side+'">'+(o.side==='w'?'Weiß':'Schwarz')+'</span>'+
+      '<h1 style="margin-top:6px">'+esc(o.name)+'</h1><p class="sub">'+esc(o.sub)+(T.mode==='mix'?' · Mix':'')+' · Stufe '+st.box+'/5</p></div>'+
+      '<div class="meta"><b>'+T.lineErr+'</b>Fehler<br>Linie '+T.count+'</div></div>'+
+    '<div class="dots" aria-label="Fortschritt in der Linie">'+dots+'</div>'+
+    '<div class="boardwrap"><div class="board" id="board"></div></div>'+
+    '<div class="msg" data-k="'+(T.msg?T.msg.k:'')+'" role="status"><i></i><span>'+esc(T.msg?T.msg.t:'')+'</span></div>'+
+    T.notes.map(x=>'<div class="card idea"><b>'+esc(x.who)+': '+esc(de(x.san))+'</b>'+esc(x.t)+'</div>').join('')+
+    bottom+
+    (T.game.history().length?'<div class="moves">'+moveText(T.game.history(),T.errAt)+'</div>':'')+
+    '<details class="card"><summary>Idee der Eröffnung</summary><p>'+esc(o.idea)+'</p></details>';
+  renderBoard();
+  const b=$('#board');
+  b.addEventListener('pointerdown',onDown);
+  const on=(id,f)=>{const x=document.getElementById(id);if(x)x.onclick=f};
+  on('b-hint',hint);on('b-show',show);on('b-skip',()=>nextLine());
+  on('b-next',()=>nextLine());on('b-again',()=>nextLine(T.line));
+}
+function mixButton(){
+  const all=OPENINGS.flatMap(o=>o.L),mm=mastery(all);
+  return '<button class="mix" onclick="startMode(\'mix\')"><div><b>Alles gemischt</b><span>'+mm.m+' von '+mm.n+' Linien sitzen · wackelige zuerst</span></div><span class="arr">→</span></button>';
+}
+let filter='all';
+function renderList(){
+  const v=$('#v-liste');
+  const ops=OPENINGS.filter(o=>filter==='all'||o.side===filter);
+  v.innerHTML='<h2 class="sect">Eröffnungen</h2>'+mixButton()+
+    '<div class="seg" role="group">'+[['all','Alle'],['w','Mit Weiß'],['b','Mit Schwarz']].map(([k,t])=>'<button data-f="'+k+'" aria-pressed="'+(filter===k)+'">'+t+'</button>').join('')+'</div>'+
+    '<div class="legend"><span><i style="background:var(--good)"></i>sitzt</span><span><i style="background:var(--warn)"></i>in Arbeit</span></div>'+
+    ops.map(o=>{const m=mastery(o.L);
+      return '<button class="op" data-op="'+o.id+'"><div><div class="row"><h3>'+esc(o.name)+'</h3><span class="tag '+o.side+'">'+(o.side==='w'?'W':'S')+'</span></div>'+
+      '<div class="s">'+esc(o.sub)+' · '+m.n+' Linien · '+m.m+' sitzen</div></div><span class="go">Üben</span>'+
+      '<div class="bar"><i class="m" style="width:'+(m.m/m.n*100)+'%"></i><i class="l" style="width:'+(m.l/m.n*100)+'%"></i></div></button>'}).join('');
+  v.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{filter=b.dataset.f;renderList()});
+  v.querySelectorAll('[data-op]').forEach(b=>b.onclick=()=>startMode(b.dataset.op));
+}
+function renderStats(){
+  const v=$('#v-stats');
+  const all=OPENINGS.flatMap(o=>o.L),mm=mastery(all);
+  const tot=P.tot.ok+P.tot.err;
+  const days=Object.keys(P.days).length;
+  const trouble=Object.entries(P.pos).filter(([k,x])=>x.err>0&&OP[x.op]).sort((a,b)=>(b[1].err-b[1].ok*.3)-(a[1].err-a[1].ok*.3)).slice(0,6);
+  v.innerHTML='<h2 class="sect">Fortschritt</h2>'+
+    '<div class="tiles"><div class="tile"><b>'+mm.m+'<small style="font-size:16px;color:var(--muted)">/'+mm.n+'</small></b><span>Linien sitzen</span></div>'+
+    '<div class="tile"><b>'+(tot?Math.round(P.tot.ok/tot*100):0)+'%</b><span>Trefferquote*</span></div>'+
+    '<div class="tile"><b>'+days+'</b><span>Trainingstage</span></div></div>'+
+    '<p class="small muted">* Anteil richtiger Züge an allen Versuchen. Eine Linie „sitzt“ ab Stufe 3 – also nach drei fehlerfreien Durchgängen in Folge.</p>'+
+    '<div class="card"><h3 class="sect" style="font-size:18px;margin-bottom:6px">Nach Eröffnung</h3><ul class="list">'+
+    OPENINGS.map(o=>{const m=mastery(o.L);return '<li><div>'+esc(o.name)+' <small>'+(o.side==='w'?'Weiß':'Schwarz')+' · '+m.l+' in Arbeit</small></div><div class="n">'+m.m+'/'+m.n+'</div>'+
+      '<div class="bar"><i class="m" style="width:'+(m.m/m.n*100)+'%"></i><i class="l" style="width:'+(m.l/m.n*100)+'%"></i></div></li>'}).join('')+'</ul></div>'+
+    '<div class="card"><h3 class="sect" style="font-size:18px;margin-bottom:6px">Problemstellen</h3>'+
+    (trouble.length?'<ul class="list">'+trouble.map(([k,x])=>'<li><div>'+esc(OP[x.op].name)+'<small>'+(x.h.length?'nach '+moveText(x.h).replace(/<[^>]+>/g,''):'erster Zug')+'</small></div><div class="n">'+x.err+' ✕</div></li>').join('')+'</ul>':'<p class="small muted">Noch keine – spiel ein paar Linien.</p>')+
+    '</div><div><button class="danger" id="b-reset">Fortschritt zurücksetzen</button></div>';
+  const r=$('#b-reset');
+  r.onclick=()=>{if(r.dataset.sure){P={lines:{},pos:{},days:{},tot:{ok:0,err:0}};save();renderStats();renderStreak()}else{r.dataset.sure='1';r.textContent='Wirklich alles löschen?';setTimeout(()=>{if(r.isConnected){delete r.dataset.sure;r.textContent='Fortschritt zurücksetzen'}},3000)}};
+}
+function renderStreak(){
+  let n=0;const d=new Date();
+  if(!P.days[today()])d.setDate(d.getDate()-1);
+  while(P.days[d.toISOString().slice(0,10)]){n++;d.setDate(d.getDate()-1)}
+  $('#streak').innerHTML=n?'<b>'+n+'</b> Tag'+(n===1?'':'e')+' in Folge':'';
+}
+function route(){
+  const v=(location.hash||'#ueben').slice(1);
+  const ok=['ueben','liste','stats'].includes(v)?v:'ueben';
+  document.querySelectorAll('.view').forEach(x=>x.hidden=x.id!=='v-'+ok);
+  document.querySelectorAll('.tabs a').forEach(a=>a.setAttribute('aria-current',a.dataset.v===ok?'page':'false'));
+  if(ok==='ueben')renderTrainer();if(ok==='liste')renderList();if(ok==='stats')renderStats();
+  renderStreak();
+  $('#main').scrollTop=0;
+}
+window.addEventListener('hashchange',route);
+window.addEventListener('keydown',e=>{if(e.key==='Escape'&&T.sel){T.sel=null;renderBoard()}});
+let lastMode=null;try{lastMode=localStorage.getItem(SK+'-mode')}catch(e){}
+if(lastMode&&(lastMode==='mix'||OP[lastMode])){T.mode=lastMode;T.pool=lastMode==='mix'?OPENINGS.flatMap(o=>o.L):OP[lastMode].L;T.count=0;nextLine()}
+route();
+if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
