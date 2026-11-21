@@ -78,7 +78,32 @@ main{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;oversc
 .dots i{width:9px;height:9px;border-radius:50%;background:var(--line)}
 .dots i.ok{background:var(--good)}.dots i.err{background:var(--warn)}.dots i.cur{background:var(--ink)}
 
-.boardwrap{position:relative;user-select:none;-webkit-user-select:none;touch-action:none}
+.boardwrap{position:relative;user-select:none;-webkit-user-select:none;touch-action:none;display:grid;grid-template-columns:minmax(0,1fr);gap:6px}
+.boardwrap.ev{grid-template-columns:26px minmax(0,1fr)}
+/* Bewertungsbalken: eigene Farbe unten */
+.evbar{position:relative;border-radius:6px;overflow:hidden;background:var(--pc-b);border:1px solid var(--line)}
+.evbar i{position:absolute;left:0;right:0;bottom:0;background:var(--pc-w);transition:height .5s ease}
+.evbar.flip{background:var(--pc-w)}.evbar.flip i{background:var(--pc-b)}
+.evbar span{position:absolute;left:0;right:0;font-size:10px;letter-spacing:-.02em;font-weight:600;text-align:center;font-variant-numeric:tabular-nums;z-index:1}
+.evbar span.lo{bottom:3px;color:var(--pc-b)}.evbar.flip span.lo{color:var(--pc-w)}
+.evbar span.hi{top:3px;color:var(--pc-w)}.evbar.flip span.hi{color:var(--pc-b)}
+.mat{display:flex;align-items:center;gap:8px;min-height:24px;font-size:13px}
+.mat .who{color:var(--muted);font-weight:500;min-width:58px}
+.mat .cap{font-family:"Apple Symbols","Segoe UI Symbol","DejaVu Sans",serif;font-size:19px;line-height:1;letter-spacing:-2px;color:var(--muted)}
+.mat b{font-variant-numeric:tabular-nums;font-weight:600}
+.mat .pts{margin-left:auto;color:var(--muted);font-variant-numeric:tabular-nums}
+.play h2{font-family:var(--display);font-weight:800;font-size:24px;letter-spacing:.04em;text-transform:uppercase;line-height:1}
+.rate{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:2px 10px;align-items:center;padding:9px 0;border-top:1px solid var(--line);font-size:14px}
+.rate:first-of-type{border-top:0}
+.rate .mv{font-family:var(--display);font-weight:800;font-size:20px;min-width:52px}
+.rate .lb{font-weight:600}
+.rate small{grid-column:2/-1;color:var(--muted);font-size:12px}
+.rate .ev{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px}
+.r-best .lb,.r-good .lb{color:var(--good)}.r-ok .lb{color:var(--ink)}.r-inacc .lb{color:var(--warn)}.r-bad .lb{color:var(--bad)}
+.pv{font-size:14px;line-height:1.7}
+.pv span{font-weight:600}
+.think{display:inline-block;width:12px;height:12px;border-radius:50%;border:2px solid var(--muted);border-top-color:transparent;animation:spin .8s linear infinite;vertical-align:-2px}
+@keyframes spin{to{transform:rotate(360deg)}}
 .boardwrap.shake{animation:shake .32s}
 @keyframes shake{20%{transform:translateX(-6px)}60%{transform:translateX(6px)}}
 .board{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(8,minmax(0,1fr));aspect-ratio:1;width:100%;border-radius:10px;overflow:hidden;border:1px solid var(--line)}
@@ -332,10 +357,89 @@ function mastery(lines){
   return {m,l,n:lines.length};
 }
 
+/* ---------- Material ---------- */
+const VAL={p:1,n:3,b:3,r:5,q:9,k:0};
+const START={p:8,n:2,b:2,r:2,q:1};
+function material(g){
+  const cnt={w:{p:0,n:0,b:0,r:0,q:0},b:{p:0,n:0,b:0,r:0,q:0}};
+  g.board().forEach(r=>r.forEach(p=>{if(p&&p.type!=='k')cnt[p.color][p.type]++}));
+  const pts=c=>Object.keys(cnt[c]).reduce((s,t)=>s+cnt[c][t]*VAL[t],0);
+  // geschlagene Figuren der Farbe c (Umwandlungen werden ignoriert)
+  const lost=c=>['q','r','b','n','p'].flatMap(t=>Array(Math.max(0,START[t]-cnt[c][t])).fill(t));
+  return {w:pts('w'),b:pts('b'),lostW:lost('w'),lostB:lost('b')};
+}
+function matRow(who,color,m){
+  const opp=color==='w'?'b':'w';
+  const took=color==='w'?m.lostB:m.lostW; // was diese Seite geschlagen hat
+  const diff=m[color]-m[opp];
+  return '<div class="mat"><span class="who">'+who+'</span><span class="cap">'+took.map(t=>GLYPH[t]+'︎').join('')+'</span>'+
+    (diff>0?'<b>+'+diff+'</b>':'')+'<span class="pts">'+m[color]+' Pkt.</span></div>';
+}
+
+/* ---------- Stockfish ---------- */
+const SF_URL='https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js';
+const Eng={w:null,ready:null,q:Promise.resolve(),handler:null,
+  init(){
+    if(this.ready)return this.ready;
+    this.ready=new Promise((res,rej)=>{
+      try{
+        const url=URL.createObjectURL(new Blob(["importScripts('"+SF_URL+"');"],{type:'application/javascript'}));
+        const w=new Worker(url);this.w=w;
+        const to=setTimeout(()=>rej(new Error('Stockfish lädt nicht')),30000);
+        w.onmessage=e=>{const l=String(e.data);
+          if(l==='uciok')w.postMessage('isready');
+          else if(l==='readyok'&&!this.handler){clearTimeout(to);res()}
+          else if(this.handler)this.handler(l)};
+        w.onerror=()=>{clearTimeout(to);rej(new Error('Stockfish-Fehler'))};
+        w.postMessage('uci');
+      }catch(e){rej(e)}
+    });
+    this.ready.catch(()=>{this.ready=null});
+    return this.ready;
+  },
+  // Ergebnis: best (UCI), cp aus Sicht der Seite am Zug, mate, pv (UCI-Liste)
+  analyse(fen,ms){
+    const run=()=>this.init().then(()=>new Promise(res=>{
+      const lines={};
+      this.handler=l=>{
+        if(l.startsWith('info')&&l.includes(' pv ')&&l.includes('score ')){
+          const cp=l.match(/score cp (-?\d+)/),mt=l.match(/score mate (-?\d+)/),k=l.match(/multipv (\d+)/);
+          lines[k?+k[1]:1]={cp:cp?+cp[1]:0,mate:mt?+mt[1]:null,pv:l.split(' pv ')[1].trim().split(' ')};
+        }else if(l.startsWith('bestmove')){
+          this.handler=null;
+          const b=l.split(' ')[1];
+          const info=Object.assign({cp:0,mate:null,pv:[]},lines[1]);
+          info.cand={};Object.values(lines).forEach(x=>{if(x.pv[0])info.cand[x.pv[0]]=cpOf(x)});
+          res(Object.assign(info,{best:b&&b!=='(none)'?b:null}));
+        }
+      };
+      this.w.postMessage('setoption name MultiPV value 3');
+      this.w.postMessage('position fen '+fen);
+      this.w.postMessage('go movetime '+(ms||1500));
+    }));
+    const p=this.q.then(run,run);this.q=p.catch(()=>{});return p;
+  }
+};
+// Bewertung in Zentibauern aus Sicht der Seite am Zug (Matt = ±10000)
+const cpOf=a=>a.mate!==null?(a.mate>0?10000-a.mate*10:-10000-a.mate*10):a.cp;
+const fmtEv=cp=>Math.abs(cp)>=9000?'M'+Math.max(1,Math.round((10000-Math.abs(cp))/10)):(cp>0?'+':cp<0?'−':'')+(Math.abs(cp)/100).toFixed(1);
+function uciToMove(fen,u){const g=new Chess(fen);return g.move({from:u.slice(0,2),to:u.slice(2,4),promotion:u[4]||'q'})}
+function pvText(fen,pv,n){
+  const g=new Chess(fen);const out=[];
+  let num=+fen.split(' ')[5],w=g.turn()==='w';
+  for(const u of pv.slice(0,n)){
+    const m=g.move({from:u.slice(0,2),to:u.slice(2,4),promotion:u[4]||'q'});if(!m)break;
+    out.push((w?num+'.':(out.length?'':num+'…'))+'<span>'+esc(de(m.san))+'</span>');
+    if(!w)num++;w=!w;
+  }
+  return out.join(' ');
+}
+const RATE=[[15,'Top-Zug','best'],[40,'Sehr gut','good'],[80,'Gut','ok'],[150,'Ungenau','inacc'],[350,'Fehler','bad'],[1e9,'Grober Fehler','bad']];
+
 /* ---------- Trainer-Zustand ---------- */
 const T={mode:null,pool:[],line:null,game:new Chess(),ply:0,side:'w',
   lineErr:0,hintUsed:false,shown:false,errHere:0,hintLvl:0,errAt:new Set(),
-  sel:null,last:null,busy:false,finished:false,count:0,prevKey:null,msg:null,notes:[]};
+  sel:null,last:null,busy:false,finished:false,count:0,prevKey:null,msg:null,notes:[],phase:'line',play:null,evW:null};
 
 function pick(pool){
   const now=Date.now();
@@ -359,7 +463,8 @@ function nextLine(line){
   T.prevKey=T.line.key;
   T.side=OP[T.line.op].side;
   T.game.reset();T.ply=0;T.lineErr=0;T.hintUsed=false;T.shown=false;T.errHere=0;T.hintLvl=0;T.errAt=new Set();
-  T.sel=null;T.last=null;T.finished=false;T.busy=false;T.notes=[];
+  T.sel=null;T.last=null;T.finished=false;T.busy=false;T.notes=[];T.phase='line';T.play=null;T.evW=null;T.gen=(T.gen||0)+1;
+  Eng.init().catch(()=>{});
   T.count++;
   T.msg={k:'',t:T.side==='w'?'Du hast Weiß. Finde den ersten Zug.':'Du hast Schwarz. Weiß beginnt …'};
   renderTrainer();
@@ -374,7 +479,10 @@ function bookMoves(){
   return set;
 }
 function expected(){return T.line.moves[T.ply]}
-function userTurn(){return !T.finished&&T.game.turn()===T.side&&T.ply<T.line.moves.length}
+function userTurn(){
+  if(T.phase==='play')return !T.busy&&T.game.turn()===T.side&&T.play.left>0&&!T.game.game_over();
+  return T.phase==='line'&&!T.finished&&T.game.turn()===T.side&&T.ply<T.line.moves.length;
+}
 
 function opponent(){
   if(T.ply>=T.line.moves.length){finish();return}
@@ -396,6 +504,7 @@ function opponent(){
 
 function tryMove(from,to){
   if(!userTurn()||T.busy)return;
+  if(T.phase==='play'){playMove(from,to);return}
   const m=T.game.move({from,to,promotion:'q'});
   if(!m){T.sel=null;renderBoard();return}
   T.game.undo();
@@ -465,8 +574,82 @@ function finish(){
   const d=today();P.days[d]=(P.days[d]||0)+1;
   save();
   T.result={perfect,box:s.box};
+  startPlay();
+}
+
+/* ---------- Weiterspielen gegen Stockfish ---------- */
+const PLAY_MOVES=2;
+function setEval(a,fen){ // a = Analyse der Stellung fen; speichert Bewertung aus Sicht von Weiß
+  const cp=cpOf(a);T.evW=fen.split(' ')[1]==='w'?cp:-cp;
+}
+function startPlay(){
+  const gen=T.gen;
+  T.phase='play';T.busy=true;
+  T.play={left:PLAY_MOVES,moves:[],pre:null,pv:null,pvFen:null,failed:false};
+  T.msg={k:'',t:'Jetzt '+PLAY_MOVES+' Züge gegen Stockfish – ohne Theorie, jeder Zug wird bewertet.'};
   renderTrainer();
-  setTimeout(()=>{const d=$('.done');if(d)d.scrollIntoView({behavior:'smooth',block:'center'})},250);
+  const fen=T.game.fen();
+  Eng.analyse(fen).then(a=>{
+    if(gen!==T.gen)return;
+    setEval(a,fen);
+    if(T.game.turn()!==T.side)botMove(a);
+    else{T.play.pre=a;T.busy=false;T.msg={k:'you',t:'Dein Zug – finde den besten Plan.'};renderTrainer()}
+  }).catch(()=>{if(gen!==T.gen)return;T.play.failed=true;endPlay()});
+}
+function botMove(a){
+  const gen=T.gen;
+  if(!a.best){endPlay();return}
+  const san=uciToMove(T.game.fen(),a.best).san;
+  T.busy=true;
+  setTimeout(()=>animateMove(san,()=>{
+    if(gen!==T.gen)return;
+    const m=T.game.move(san);T.last=[m.from,m.to];
+    T.msg={k:'',t:'Stockfish spielt '+de(m.san)+' …'};
+    renderTrainer();
+    if(T.game.game_over()){endPlay();return}
+    const fen=T.game.fen();
+    Eng.analyse(fen).then(b=>{
+      if(gen!==T.gen)return;
+      setEval(b,fen);T.play.pre=b;T.busy=false;
+      T.msg={k:'you',t:'Stockfish spielt '+de(m.san)+'. Dein Zug'+(T.play.left===1?' – der letzte.':'.')};
+      renderTrainer();
+    }).catch(()=>{T.play.failed=true;endPlay()});
+  }),350);
+}
+function playMove(from,to){
+  const gen=T.gen;
+  const before=T.game.fen(),pre=T.play.pre;
+  const m=T.game.move({from,to,promotion:'q'});
+  if(!m){T.sel=null;renderBoard();return}
+  T.last=[m.from,m.to];T.sel=null;T.busy=true;T.play.left--;
+  T.msg={k:'',t:'Stockfish prüft '+de(m.san)+' …'};
+  renderTrainer();
+  const fen=T.game.fen();
+  const done=a=>{
+    if(gen!==T.gen)return;
+    const uci=m.from+m.to+(m.promotion||'');
+    const bestCp=cpOf(pre);
+    // Liegt der Zug unter Stockfishs Top-3, zählt dessen Wert aus derselben Suche (weniger Rauschen)
+    const after=uci in pre.cand?pre.cand[uci]:a?-cpOf(a):(T.game.in_checkmate()?10000:0); // aus Sicht des Spielers
+    const isBest=pre.best===uci;
+    const loss=Math.max(0,bestCp-after);
+    const r=isBest?[0,'Bester Zug','best']:RATE.find(x=>loss<=x[0]);
+    const bestSan=!isBest&&loss>15&&pre.best?de(uciToMove(before,pre.best).san):null;
+    T.play.moves.push({san:m.san,label:r[1],cls:r[2],loss,bestSan,after});
+    if(a)setEval(a,fen);else T.evW=T.side==='w'?after:-after;
+    flash(m.to,r[2]==='best'||r[2]==='good'||r[2]==='ok'?'right':'wrong');
+    T.msg={k:r[2]==='inacc'||r[2]==='bad'?'err':'ok',t:de(m.san)+': '+r[1]+(bestSan?' – besser war '+bestSan:'')};
+    if(!a||T.game.game_over()||T.play.left<=0){T.play.pv=a?a.pv:null;T.play.pvFen=fen;endPlay();return}
+    renderTrainer();
+    botMove(a);
+  };
+  if(T.game.game_over()){done(null);return}
+  Eng.analyse(fen).then(done).catch(()=>{T.play.failed=true;endPlay()});
+}
+function endPlay(){
+  T.phase='end';T.busy=false;
+  renderTrainer();
+  setTimeout(()=>{const d=$('.play');if(d)d.scrollIntoView({behavior:'smooth',block:'start'})},250);
 }
 
 /* ---------- Brett ---------- */
@@ -483,7 +666,7 @@ function renderBoard(){
   const el=$('#board');if(!el)return;
   const g=T.game, sqs=squares();
   let hintSq=null;
-  if(userTurn()&&T.hintLvl>=2){const e=g.move(expected());g.undo();hintSq=e.from}
+  if(T.phase==='line'&&userTurn()&&T.hintLvl>=2){const e=g.move(expected());g.undo();hintSq=e.from}
   const tg=new Map();
   if(T.sel)g.moves({square:T.sel,verbose:true}).forEach(m=>tg.set(m.to,!!m.captured));
   el.innerHTML=sqs.map((s,i)=>{
@@ -554,6 +737,31 @@ function onUp(e){
 }
 
 /* ---------- Ansichten ---------- */
+function userCp(){return T.evW===null?0:(T.side==='w'?T.evW:-T.evW)}
+function evBar(){
+  const cp=userCp(),wp=100/(1+Math.pow(10,-Math.max(-2000,Math.min(2000,cp))/400));
+  const lbl=T.evW===null?'':fmtEv(cp);
+  return '<div class="evbar'+(T.side==='b'?' flip':'')+'" title="Bewertung aus deiner Sicht"><i style="height:'+wp.toFixed(1)+'%"></i>'+
+    (lbl?'<span class="'+(cp>=0?'lo':'hi')+'">'+lbl+'</span>':'')+'</div>';
+}
+function playCard(){
+  const p=T.play;if(!p)return '';
+  const rows=p.moves.map(x=>'<div class="rate r-'+x.cls+'"><span class="mv">'+esc(de(x.san))+'</span><span class="lb">'+x.label+'</span>'+
+    '<span class="ev">'+fmtEv(x.after)+'</span>'+(x.bestSan?'<small>'+esc(x.bestSan)+' wäre '+(Math.min(x.loss,999)/100).toFixed(1).replace(".",",")+' Bauern besser gewesen</small>':'')+'</div>').join('');
+  let body;
+  if(p.failed){
+    body='<p class="small muted" style="margin-top:6px">Stockfish konnte nicht geladen werden (keine Verbindung?). Die Linie ist trotzdem gespeichert.</p>';
+  }else if(T.phase==='play'){
+    body='<p class="small muted" style="margin:6px 0 4px">Zug '+(PLAY_MOVES-p.left+(T.game.turn()===T.side?1:0))+' von '+PLAY_MOVES+(T.busy?' · <span class="think"></span> Stockfish rechnet':'')+'</p>'+rows;
+  }else{
+    const cp=userCp();
+    const verdict=Math.abs(cp)<40?'Ausgeglichen':cp>0?(cp<150?'Du stehst etwas besser':cp<400?'Du stehst klar besser':'Du stehst auf Gewinn'):(cp>-150?'Der Gegner steht etwas besser':cp>-400?'Der Gegner steht klar besser':'Der Gegner steht auf Gewinn');
+    body='<p style="margin:8px 0 2px;font-weight:600">'+verdict+' ('+fmtEv(cp)+')</p>'+
+      '<p class="small muted" style="margin-bottom:4px">Bewertung aus deiner Sicht, + = Vorteil für dich.</p>'+rows+
+      (p.pv&&p.pv.length?'<div style="margin-top:10px"><b style="font-family:var(--display);letter-spacing:.06em;text-transform:uppercase;font-size:14px">So geht’s weiter</b><p class="pv">'+pvText(p.pvFen,p.pv,8)+'</p><p class="small muted">Stockfishs beste Fortsetzung aus der Endstellung.</p></div>':'');
+  }
+  return '<div class="card play"><h2>Gegen Stockfish</h2>'+body+'</div>';
+}
 function renderTrainer(){
   const v=$('#v-ueben');
   if(!T.line){
@@ -564,6 +772,7 @@ function renderTrainer(){
   }
   const o=OP[T.line.op];
   const st=LS(T.line.key);
+  const mat=material(T.game);
   const userPlies=[];for(let i=T.side==='w'?0:1;i<T.line.moves.length;i+=2)userPlies.push(i);
   const dots=userPlies.map(i=>'<i class="'+(i<T.ply?(T.errAt.has(i)?'err':'ok'):(i===T.ply&&!T.finished?'cur':''))+'"></i>').join('');
   let bottom='';
@@ -571,7 +780,8 @@ function renderTrainer(){
     const r=T.result;
     bottom='<div class="card done'+(r.perfect?'':' meh')+'"><h2>'+(r.perfect?'Fehlerfrei!':'Linie geschafft')+'</h2>'+
       '<p class="small muted" style="margin-top:6px">'+(r.perfect?'Die Linie rückt auf Stufe '+r.box+' von 5 und kommt seltener dran.':(T.shown?'Mit Lösung – die Linie kommt bald wieder.':T.lineErr+' Fehlversuch'+(T.lineErr===1?'':'e')+' – sie kommt öfter dran, bis sie sitzt.'))+'</p>'+
-      '<div class="row"><button class="btn grow" id="b-next">Nächste Linie</button><button class="btn sec" id="b-again">Nochmal</button></div></div>';
+      '<div class="row"><button class="btn grow" id="b-next">Nächste Linie</button><button class="btn sec" id="b-again">Nochmal</button></div></div>'+
+      playCard();
   }else{
     const hot=T.errHere>=3;
     bottom='<div class="ctrl"><button id="b-hint"'+(userTurn()&&!T.busy&&T.hintLvl<2?'':' disabled')+'>Tipp</button>'+
@@ -583,7 +793,9 @@ function renderTrainer(){
       '<h1 style="margin-top:6px">'+esc(o.name)+'</h1><p class="sub">'+esc(o.sub)+(T.mode==='mix'?' · Mix':'')+' · Stufe '+st.box+'/5</p></div>'+
       '<div class="meta"><b>'+T.lineErr+'</b>Fehler<br>Linie '+T.count+'</div></div>'+
     '<div class="dots" aria-label="Fortschritt in der Linie">'+dots+'</div>'+
-    '<div class="boardwrap"><div class="board" id="board"></div></div>'+
+    matRow('Gegner',T.side==='w'?'b':'w',mat)+
+    '<div class="boardwrap'+(T.phase!=='line'?' ev':'')+'">'+(T.phase!=='line'?evBar():'')+'<div class="board" id="board"></div></div>'+
+    matRow('Du',T.side,mat)+
     '<div class="msg" data-k="'+(T.msg?T.msg.k:'')+'" role="status"><i></i><span>'+esc(T.msg?T.msg.t:'')+'</span></div>'+
     T.notes.map(x=>'<div class="card idea"><b>'+esc(x.who)+': '+esc(de(x.san))+'</b>'+esc(x.t)+'</div>').join('')+
     bottom+
