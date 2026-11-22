@@ -53,7 +53,7 @@ h1,h2,h3,p{margin:0}
 main{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .view{max-width:560px;margin:0 auto;padding:14px 16px 28px;display:flex;flex-direction:column;gap:14px}
 
-.tabs{display:grid;grid-template-columns:repeat(3,1fr);background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
 .tabs a{display:flex;flex-direction:column;align-items:center;gap:4px;padding:9px 4px 10px;text-decoration:none;color:var(--muted);
   font-family:var(--display);font-weight:800;font-size:13px;letter-spacing:.1em;text-transform:uppercase;border-top:2px solid transparent;margin-top:-1px}
 .tabs a svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -175,6 +175,41 @@ details p{font-size:14px;margin-top:6px}
 .mix span{font-size:13px;font-weight:500}
 .mix .arr{font-family:var(--display);font-weight:800;font-size:34px}
 
+/* Vorschaubild */
+.mini{display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);width:88px;height:88px;flex:none;border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+.mini i{display:flex;align-items:center;justify-content:center;font-style:normal;line-height:1}
+.mini i.l{background:var(--sq-l)}.mini i.d{background:var(--sq-d)}
+.mini i.lm{box-shadow:inset 0 0 0 20px rgba(255,90,54,.38)}
+.mini b{font-family:"Apple Symbols","Segoe UI Symbol","DejaVu Sans",serif;font-size:10.5px;font-weight:400}
+.mini b.w{color:var(--pc-w);-webkit-text-stroke:.5px #1a1816;paint-order:stroke fill}
+.mini b.b{color:var(--pc-b)}
+.opc{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px}
+.opmain{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center}
+.info{display:flex;flex-direction:column;gap:5px;min-width:0}
+.info h3{font-size:17px;font-weight:600;line-height:1.2}
+.info .s{font-size:13px;color:var(--muted)}
+.go{border:0;background:none;padding:8px 2px;font-family:var(--display);font-weight:800;font-size:16px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.opc details{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+.vars{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.vars button{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;border:1px solid var(--line);background:var(--sunk);border-radius:10px;padding:10px 12px;font-size:14px}
+.vars .vn{min-width:0}
+.pips{display:flex;gap:3px;flex:none}
+.pips i{width:7px;height:7px;border-radius:50%;background:var(--line)}
+.pips i.m{background:var(--good)}.pips i.l{background:var(--warn)}
+.opg{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px}
+.opg .go{pointer-events:none}
+.lvls{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.lvls button{position:relative;text-align:left;border:1px solid var(--line);background:var(--sunk);border-radius:10px;padding:10px 12px;min-width:0}
+.lvls b{hyphens:auto;-webkit-hyphens:auto}
+.lvls button:last-child{grid-column:1/-1}
+.lvls b{display:block;font-size:15px;font-weight:600}
+.lvls span{font-size:12px;color:var(--muted)}
+.lvls em{display:block;margin-top:2px;font-size:12px;font-weight:600;color:var(--accent)}
+.lvls i{position:absolute;right:10px;top:8px;font-style:normal;font-family:var(--display);font-weight:800;font-size:18px;color:var(--accent)}
+.ctrl.one{grid-template-columns:1fr}
+.sq.chk::before{content:"";position:absolute;inset:0;background:radial-gradient(circle,rgba(255,40,20,.75) 0%,rgba(255,40,20,.25) 60%,transparent 75%)}
+.up{color:var(--good)}.down{color:var(--bad)}.flat{color:var(--muted)}
+
 /* Fortschritt */
 .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 10px 8px}
@@ -200,11 +235,13 @@ details p{font-size:14px;margin-top:6px}
 <main id="main">
   <section class="view" id="v-ueben"></section>
   <section class="view" id="v-liste" hidden></section>
+  <section class="view" id="v-partie" hidden></section>
   <section class="view" id="v-stats" hidden></section>
 </main>
 <nav class="tabs">
   <a href="#ueben" data-v="ueben"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="2"/><path d="M3.5 12h17M12 3.5v17"/><rect x="3.5" y="3.5" width="8.5" height="8.5" fill="currentColor" stroke="none" opacity=".5"/><rect x="12" y="12" width="8.5" height="8.5" fill="currentColor" stroke="none" opacity=".5"/></svg>Üben</a>
   <a href="#liste" data-v="liste"><svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>Eröffnungen</a>
+  <a href="#partie" data-v="partie"><svg viewBox="0 0 24 24"><path d="M9 20h8M10 20l1-5h4l1 5M11 15c-2-1-3-3-2-6l3-4 2 1c2 1 3 3 2 5l-1 4"/><path d="M12.5 8.5h.01"/></svg>Partie</a>
   <a href="#stats" data-v="stats"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Fortschritt</a>
 </nav>
 
@@ -324,6 +361,18 @@ const OPENINGS=[
  ]}
 ];
 
+/* Namen der Varianten (gleiche Reihenfolge wie lines) und Erkennungsstellung fürs Vorschaubild */
+const VARS={
+ ital:{fig:'e4 e5 Nf3 Nc6 Bc4 Bc5',n:['Giuoco Pianissimo: 4…Sf6 5.d3 d6','Giuoco Pianissimo: 5…0-0','Giuoco Pianissimo: 4…d6','Zweispringerspiel: 4…Le7','Zweispringerspiel: 4…Lc5','Zweispringerspiel: 4…d5']},
+ span:{fig:'e4 e5 Nf3 Nc6 Bb5',n:['Geschlossen: Hauptvariante mit 9.h3','Marshall-Angriff','Offenes Spanisch','Berliner Verteidigung','Verbesserte Steinitz-Verteidigung','Klassisch: 3…Lc5','Arkhangelsk-Variante']},
+ dg:{fig:'d4 d5 c4',n:['Abgelehnt: Tartakower','Abgelehnt: Orthodox mit 7.Tc1','Abgelehnt: 3…Le7','Tarrasch-Verteidigung','Angenommenes Damengambit','Slawisch: 5.a4 Lf5','Halbslawisch: Moskauer Variante']},
+ lon:{fig:'d4 d5 Bf4 Nf6 e3 e6 Nf3 c5 c3',n:['Gegen …c5 und …Sc6','Gegen …e6 und …Ld6','Gegen frühes 2…c5','Gegen …Db6','Gegen 2…Lf5','Gegen den Königsinder-Aufbau','Gegen 1…Sf6 und …e6']},
+ sizi:{fig:'e4 c5',n:['Najdorf: Englischer Angriff 6.Le3','Najdorf: 6.Lg5','Najdorf: 6.Le2','Najdorf: Sosin-Angriff 6.Lc4','Najdorf: 6.f3','4.Dxd4','Moskauer Variante 3.Lb5+','Alapin-Variante 2.c3','Geschlossenes Sizilianisch']},
+ franz:{fig:'e4 e6 d4 d5',n:['Klassisch: 4.Lg5 Le7','Steinitz-Variante 4.e5','Klassisch: 5.Lxf6','Vorstoß: 6.Le2','Vorstoß: Milner-Barry-Gambit','Vorstoß: 6.a3','Tarrasch-Variante 3.Sd2','Abtauschvariante','Königsindischer Angriff']},
+ caro:{fig:'e4 c6 d4 d5',n:['Klassisch: 4…Lf5','Klassisch über 3.Sd2','Vorstoß: Short-Variante','Vorstoß: 4.Sc3 und 5.g4','Vorstoß: 4.Ld3','Abtausch: 4.Ld3','Panow-Angriff','Zweispringer-Variante','Königsindischer Angriff']},
+ e5b:{fig:'e4 e5 Nf3 Nc6',n:['Italienisch: Giuoco Pianissimo','Italienisch: 5.d4','Italienisch: 4.0-0','Evans-Gambit','Spanisch: Breyer-Variante','Spanisch: Abtauschvariante','Schottisch','Vierspringerspiel','Wiener Partie: 3.f4','Läuferspiel']},
+ dgb:{fig:'d4 d5 c4 e6',n:['Tartakower','Abtausch 7.Lxf6','Mit 5.Sf3','Abtauschvariante','4.Sf3 mit Lg5','Katalanisch','5.Lf4','Über 2.Sf3','Gegen das Londoner System']}
+};
 /* ---------- Aufbereitung + Prüfung ---------- */
 const OP={};
 OPENINGS.forEach(o=>{
@@ -340,16 +389,17 @@ OPENINGS.forEach(o=>{
     }
     o.L.push({op:o.id,key:o.id+':'+moves.join(' '),moves,notes});
   });
+  o.fig=VARS[o.id].fig;o.L.forEach((l,i)=>{l.name=VARS[o.id].n[i]||('Variante '+(i+1))});
   OP[o.id]=o;
 });
 
 /* ---------- Speicher ---------- */
 const SK='eroeffnungstrainer-v1';
-let P={lines:{},pos:{},days:{},tot:{ok:0,err:0}};
+let P={lines:{},pos:{},days:{},tot:{ok:0,err:0},games:[]};
 try{const s=JSON.parse(localStorage.getItem(SK)||'null');if(s&&s.lines)P=Object.assign(P,s)}catch(e){}
 function saveLocal(){try{localStorage.setItem(SK,JSON.stringify(P))}catch(e){}}
 function save(){saveLocal();if(syncOn){dirty=true;scheduleFlush()}}
-const emptyP=()=>({lines:{},pos:{},days:{},tot:{ok:0,err:0}});
+const emptyP=()=>({lines:{},pos:{},days:{},tot:{ok:0,err:0},games:[]});
 const today=()=>new Date().toISOString().slice(0,10);
 const LS=k=>P.lines[k]||{box:0,seen:0,perfect:0,last:0};
 
@@ -408,7 +458,8 @@ const Eng={w:null,ready:null,q:Promise.resolve(),handler:null,
     return this.ready;
   },
   // Ergebnis: best (UCI), cp aus Sicht der Seite am Zug, mate, pv (UCI-Liste)
-  analyse(fen,ms){
+  analyse(fen,o){
+    o=typeof o==='number'?{ms:o}:(o||{});
     const run=()=>this.init().then(()=>new Promise(res=>{
       const lines={};
       this.handler=l=>{
@@ -423,9 +474,10 @@ const Eng={w:null,ready:null,q:Promise.resolve(),handler:null,
           res(Object.assign(info,{best:b&&b!=='(none)'?b:null}));
         }
       };
-      this.w.postMessage('setoption name MultiPV value 3');
+      this.w.postMessage('setoption name Skill Level value '+(o.skill==null?20:o.skill));
+      this.w.postMessage('setoption name MultiPV value '+(o.multipv||3));
       this.w.postMessage('position fen '+fen);
-      this.w.postMessage('go movetime '+(ms||1500));
+      this.w.postMessage('go '+(o.depth?'depth '+o.depth+' ':'')+'movetime '+(o.ms||1500));
     }));
     const p=this.q.then(run,run);this.q=p.catch(()=>{});return p;
   }
@@ -446,224 +498,354 @@ function pvText(fen,pv,n){
 }
 const RATE=[[15,'Top-Zug','best'],[40,'Sehr gut','good'],[80,'Gut','ok'],[150,'Ungenau','inacc'],[350,'Fehler','bad'],[1e9,'Grober Fehler','bad']];
 
-/* ---------- Trainer-Zustand ---------- */
-const T={mode:null,pool:[],line:null,game:new Chess(),ply:0,side:'w',
-  lineErr:0,hintUsed:false,shown:false,errHere:0,hintLvl:0,errAt:new Set(),
-  sel:null,last:null,busy:false,finished:false,count:0,prevKey:null,msg:null,notes:[],phase:'line',play:null,evW:null};
+/* ---------- Trainer-Zustand: zwei Bretter (Üben und Partie) ---------- */
+let GEN=0;
+function newState(kind,view){return {kind,view,mode:null,pool:[],line:null,game:new Chess(),ply:0,side:'w',
+  lineErr:0,hintUsed:false,shown:false,errHere:0,hintLvl:0,errAt:new Set(),sel:null,last:null,busy:false,finished:false,
+  count:0,prevKey:null,msg:null,notes:[],phase:'line',play:null,evW:null,gen:0,result:null,level:null,over:null,sure:false}}
+const TT=newState('train','v-ueben'),TG=newState('game','v-partie');
+let T=TT; // das gerade sichtbare Brett
+const live=S=>S===T&&!document.getElementById(S.view).hidden;
+function paint(S){if(live(S))renderTrainer()}
 
-function pick(pool){
+function pick(pool,prev){
   const now=Date.now();
   // niedrige Stufe zuerst; gerade gespielte Linien etwas nach hinten; Zufall gegen Monotonie
   const scored=pool.map(l=>{const s=LS(l.key);return {l,score:s.box*10+(s.last&&now-s.last<6e5?4:0)+Math.random()*3}});
   scored.sort((a,b)=>a.score-b.score);
   let c=scored[0].l;
-  if(c.key===T.prevKey&&scored.length>1)c=scored[1].l;
+  if(c.key===prev&&scored.length>1)c=scored[1].l;
   return c;
 }
-function startMode(mode){
-  T.mode=mode;
-  T.pool=mode==='mix'?OPENINGS.flatMap(o=>o.L):OP[mode].L;
-  T.count=0;
-  try{localStorage.setItem(SK+'-mode',mode)}catch(e){}
-  nextLine();
+function setPool(S,mode){
+  const [id,i]=mode.split('#');
+  if(id!=='mix'&&!OP[id])return false;
+  S.mode=mode;
+  S.pool=id==='mix'?OPENINGS.flatMap(o=>o.L):i==null?OP[id].L:[OP[id].L[+i]].filter(Boolean);
+  return S.pool.length>0;
+}
+// mode: Eröffnungs-ID oder 'mix'; idx: einzelne Variante
+function startMode(mode,idx){
+  const S=TT;
+  if(!setPool(S,idx==null?mode:mode+'#'+idx))return;
+  S.count=0;
+  try{localStorage.setItem(SK+'-mode',S.mode)}catch(e){}
+  T=S;
+  nextLine(S);
   if(location.hash!=='#ueben')location.hash='#ueben';else route();
 }
-function nextLine(line){
-  T.line=line||pick(T.pool);
-  T.prevKey=T.line.key;
-  T.side=OP[T.line.op].side;
-  T.game.reset();T.ply=0;T.lineErr=0;T.hintUsed=false;T.shown=false;T.errHere=0;T.hintLvl=0;T.errAt=new Set();
-  T.sel=null;T.last=null;T.finished=false;T.busy=false;T.notes=[];T.phase='line';T.play=null;T.evW=null;T.gen=(T.gen||0)+1;
-  Eng.init().catch(()=>{});
-  T.count++;
-  T.msg={k:'',t:T.side==='w'?'Du hast Weiß. Finde den ersten Zug.':'Du hast Schwarz. Weiß beginnt …'};
-  renderTrainer();
-  opponent();
+function resetState(S,line){
+  S.line=line;S.prevKey=line.key;S.side=OP[line.op].side;
+  S.game.reset();S.ply=0;S.lineErr=0;S.hintUsed=false;S.shown=false;S.errHere=0;S.hintLvl=0;S.errAt=new Set();
+  S.sel=null;S.last=null;S.finished=false;S.busy=false;S.notes=[];S.phase='line';S.play=null;S.evW=null;
+  S.result=null;S.over=null;S.level=null;S.sure=false;S.gen=++GEN;
 }
-function bookMoves(){
+function nextLine(S,line){
+  resetState(S,line||pick(S.pool,S.prevKey));
+  S.count++;
+  S.msg={k:'',t:S.side==='w'?'Du hast Weiß. Finde den ersten Zug.':'Du hast Schwarz. Weiß beginnt …'};
+  if(S.kind==='game')saveGame(S);
+  Eng.init().catch(()=>{});
+  paint(S);
+  opponent(S);
+}
+function bookMoves(S){
   // alle eigenen Repertoirezüge in dieser Stellung (über alle Linien derselben Eröffnung)
-  const h=T.game.history();const set=new Map();
-  OP[T.line.op].L.forEach(l=>{
+  const h=S.game.history();const set=new Map();
+  OP[S.line.op].L.forEach(l=>{
     if(l.moves.length>h.length&&h.every((m,i)=>l.moves[i]===m)){if(!set.has(l.moves[h.length]))set.set(l.moves[h.length],l)}
   });
   return set;
 }
-function expected(){return T.line.moves[T.ply]}
-function userTurn(){
-  if(T.phase==='play')return !T.busy&&T.game.turn()===T.side&&T.play.left>0&&!T.game.game_over();
-  return T.phase==='line'&&!T.finished&&T.game.turn()===T.side&&T.ply<T.line.moves.length;
+const expected=S=>S.line.moves[S.ply];
+function userTurn(S){
+  if(!S.line||S.busy)return false;
+  const g=S.game;
+  if(S.phase==='line')return !S.finished&&g.turn()===S.side&&S.ply<S.line.moves.length;
+  if(S.phase==='play')return g.turn()===S.side&&S.play.left>0&&!g.game_over();
+  if(S.phase==='game')return g.turn()===S.side&&!S.over&&!g.game_over();
+  return false;
 }
 
-function opponent(){
-  if(T.ply>=T.line.moves.length){finish();return}
-  if(T.game.turn()===T.side){renderTrainer();return}
-  T.busy=true;
+function opponent(S){
+  if(S.ply>=S.line.moves.length){finish(S);return}
+  if(S.game.turn()===S.side){paint(S);return}
+  S.busy=true;const gen=S.gen;
   setTimeout(()=>{
-    const san=expected();
-    animateMove(san,()=>{
-      const m=T.game.move(san);T.last=[m.from,m.to];T.ply++;
-      const n=T.line.notes[T.ply-1];
-      if(n)T.notes.push({who:'Gegner',san:m.san,t:n});
-      T.busy=false;
-      if(T.ply>=T.line.moves.length){finish();return}
-      T.msg={k:'you',t:'Gegner spielt '+de(m.san)+'. Dein Zug.'};
-      renderTrainer();
+    if(gen!==S.gen)return;
+    const san=expected(S);
+    animateMove(S,san,()=>{
+      if(gen!==S.gen)return;
+      const m=S.game.move(san);S.last=[m.from,m.to];S.ply++;
+      const n=S.line.notes[S.ply-1];
+      if(n)S.notes.push({who:'Gegner',san:m.san,t:n});
+      S.busy=false;
+      if(S.kind==='game')saveGame(S);
+      if(S.ply>=S.line.moves.length){finish(S);return}
+      S.msg={k:'you',t:'Gegner spielt '+de(m.san)+'. Dein Zug.'};
+      paint(S);
     });
-  },T.ply===0?650:420);
+  },S.ply===0?650:420);
 }
 
 function tryMove(from,to){
-  if(!userTurn()||T.busy)return;
-  if(T.phase==='play'){playMove(from,to);return}
-  const m=T.game.move({from,to,promotion:'q'});
-  if(!m){T.sel=null;renderBoard();return}
-  T.game.undo();
-  const book=bookMoves();
-  const pk=T.line.op+'|'+T.game.fen().split(' ').slice(0,4).join(' ');
-  P.pos[pk]=P.pos[pk]||{err:0,ok:0,op:T.line.op,h:T.game.history()};
+  const S=T;
+  if(!userTurn(S))return;
+  if(S.phase==='play'){playMove(S,from,to);return}
+  if(S.phase==='game'){gameMove(S,from,to);return}
+  const m=S.game.move({from,to,promotion:'q'});
+  if(!m){S.sel=null;renderBoard();return}
+  S.game.undo();
+  const book=bookMoves(S);
+  const pk=S.line.op+'|'+S.game.fen().split(' ').slice(0,4).join(' ');
+  P.pos[pk]=P.pos[pk]||{err:0,ok:0,op:S.line.op,h:S.game.history()};
   if(book.has(m.san)){
-    if(expected()!==m.san){ // anderer Buchzug -> passende Linie übernehmen
-      const alt=OP[T.line.op].L.filter(l=>{const h=T.game.history();return l.moves.length>h.length&&h.every((x,i)=>l.moves[i]===x)&&l.moves[h.length]===m.san});
-      T.line=pick(alt);
+    if(expected(S)!==m.san){ // anderer Buchzug -> passende Linie übernehmen
+      const h=S.game.history();
+      const alt=OP[S.line.op].L.filter(l=>l.moves.length>h.length&&h.every((x,i)=>l.moves[i]===x)&&l.moves[h.length]===m.san);
+      S.line=pick(alt);
     }
-    T.game.move(m.san);T.last=[m.from,m.to];T.ply++;T.sel=null;
+    S.game.move(m.san);S.last=[m.from,m.to];S.ply++;S.sel=null;
     P.pos[pk].ok++;P.tot.ok++;
-    const n=T.line.notes[T.ply-1];
-    T.notes=n?[{who:'Du',san:m.san,t:n}]:[];
-    T.msg={k:'ok',t:(T.errHere?'Jetzt stimmt’s: ':'Richtig: ')+de(m.san)};
-    T.errHere=0;T.hintLvl=0;
+    const n=S.line.notes[S.ply-1];
+    S.notes=n?[{who:'Du',san:m.san,t:n}]:[];
+    S.msg={k:'ok',t:(S.errHere?'Jetzt stimmt’s: ':'Richtig: ')+de(m.san)};
+    S.errHere=0;S.hintLvl=0;
     save();
+    if(S.kind==='game')saveGame(S);
     renderTrainer();flash(m.to,'right');
-    opponent();
+    opponent(S);
   }else{
-    T.lineErr++;T.errHere++;T.errAt.add(T.ply);
+    S.lineErr++;S.errHere++;S.errAt.add(S.ply);
     P.pos[pk].err++;P.tot.err++;save();
-    T.sel=null;
-    const exp=T.game.move(expected());T.game.undo();
-    const lvl=Math.min(3,T.errHere);
-    T.hintLvl=Math.max(T.hintLvl,lvl>=2?lvl-1:0);
-    const t=T.errHere===1?de(m.san)+' ist nicht die Theorie hier. Nochmal!'
-      :T.errHere===2?'Auch nicht. Tipp: Gesucht ist ein '+PNAME[exp.piece]+'zug.'
-      :T.errHere===3?'Die richtige Figur ist jetzt markiert.'
+    S.sel=null;
+    const exp=S.game.move(expected(S));S.game.undo();
+    const lvl=Math.min(3,S.errHere);
+    S.hintLvl=Math.max(S.hintLvl,lvl>=2?lvl-1:0);
+    const t=S.errHere===1?de(m.san)+' ist nicht die Theorie hier. Nochmal!'
+      :S.errHere===2?'Auch nicht. Tipp: Gesucht ist ein '+PNAME[exp.piece]+'zug.'
+      :S.errHere===3?'Die richtige Figur ist jetzt markiert.'
       :'Noch nicht – du kannst dir den Zug zeigen lassen.';
-    T.msg={k:'err',t};
+    S.msg={k:'err',t};
     renderTrainer();flash(to,'wrong');
-    const bw=$('.boardwrap');bw.classList.remove('shake');void bw.offsetWidth;bw.classList.add('shake');
+    const bw=inView('.boardwrap');if(bw){bw.classList.remove('shake');void bw.offsetWidth;bw.classList.add('shake')}
   }
 }
 function hint(){
-  if(!userTurn())return;
-  T.hintUsed=true;
-  T.hintLvl=Math.min(2,T.hintLvl+1);
-  const exp=T.game.move(expected());T.game.undo();
-  T.msg={k:'err',t:T.hintLvl===1?'Tipp: Gesucht ist ein '+PNAME[exp.piece]+'zug.':'Tipp: Diese Figur ist dran.'};
+  const S=T;
+  if(S.phase!=='line'||!userTurn(S))return;
+  S.hintUsed=true;
+  S.hintLvl=Math.min(2,S.hintLvl+1);
+  const exp=S.game.move(expected(S));S.game.undo();
+  S.msg={k:'err',t:S.hintLvl===1?'Tipp: Gesucht ist ein '+PNAME[exp.piece]+'zug.':'Tipp: Diese Figur ist dran.'};
   renderTrainer();
 }
 function show(){
-  if(!userTurn()||T.busy)return;
-  T.shown=true;T.errAt.add(T.ply);T.busy=true;
-  const san=expected();
-  animateMove(san,()=>{
-    const m=T.game.move(san);T.last=[m.from,m.to];T.ply++;T.busy=false;
-    const n=T.line.notes[T.ply-1];
-    T.notes=n?[{who:'Lösung',san:m.san,t:n}]:[];
-    T.msg={k:'err',t:'Der Zug war '+de(m.san)+'. Merk ihn dir – die Linie kommt bald wieder.'};
-    T.errHere=0;T.hintLvl=0;
-    renderTrainer();
-    opponent();
+  const S=T;
+  if(S.phase!=='line'||!userTurn(S))return;
+  S.shown=true;S.errAt.add(S.ply);S.busy=true;
+  const san=expected(S),gen=S.gen;
+  animateMove(S,san,()=>{
+    if(gen!==S.gen)return;
+    const m=S.game.move(san);S.last=[m.from,m.to];S.ply++;S.busy=false;
+    const n=S.line.notes[S.ply-1];
+    S.notes=n?[{who:'Lösung',san:m.san,t:n}]:[];
+    S.msg={k:'err',t:'Der Zug war '+de(m.san)+'. Merk ihn dir – die Linie kommt bald wieder.'};
+    S.errHere=0;S.hintLvl=0;
+    if(S.kind==='game')saveGame(S);
+    paint(S);
+    opponent(S);
   });
 }
-function finish(){
-  T.finished=true;
-  const s=Object.assign({},LS(T.line.key));
-  const perfect=T.lineErr===0&&!T.hintUsed&&!T.shown;
+function finish(S){
+  S.finished=true;
+  if(S.kind==='game'){
+    S.phase='pick';S.notes=[];
+    S.msg={k:'ok',t:'Eröffnung geschafft! Wähle jetzt, wie stark der Bot spielen soll.'};
+    saveGame(S);paint(S);
+    const gen=S.gen,fen=S.game.fen();
+    Eng.analyse(fen).then(a=>{if(gen!==S.gen||S.phase!=='pick')return;setEval(S,a,fen);paint(S)}).catch(()=>{});
+    return;
+  }
+  const s=Object.assign({},LS(S.line.key));
+  const perfect=S.lineErr===0&&!S.hintUsed&&!S.shown;
   s.seen++;s.last=Date.now();
   if(perfect){s.box=Math.min(5,s.box+1);s.perfect++}
-  else s.box=T.shown?0:Math.max(0,s.box-1);
-  P.lines[T.line.key]=s;
+  else s.box=S.shown?0:Math.max(0,s.box-1);
+  P.lines[S.line.key]=s;
   const d=today();P.days[d]=(P.days[d]||0)+1;
   save();
-  T.result={perfect,box:s.box};
-  startPlay();
+  S.result={perfect,box:s.box};
+  startPlay(S);
 }
 
-/* ---------- Weiterspielen gegen Stockfish ---------- */
+/* ---------- Üben: 2 Züge gegen Stockfish nach der Linie ---------- */
 const PLAY_MOVES=2;
-function setEval(a,fen){ // a = Analyse der Stellung fen; speichert Bewertung aus Sicht von Weiß
-  const cp=cpOf(a);T.evW=fen.split(' ')[1]==='w'?cp:-cp;
+function setEval(S,a,fen){ // a = Analyse der Stellung fen; speichert Bewertung aus Sicht von Weiß
+  const cp=cpOf(a);S.evW=fen.split(' ')[1]==='w'?cp:-cp;
 }
-function startPlay(){
-  const gen=T.gen;
-  T.phase='play';T.busy=true;
-  T.play={left:PLAY_MOVES,moves:[],pre:null,pv:null,pvFen:null,failed:false};
-  T.msg={k:'',t:'Jetzt '+PLAY_MOVES+' Züge gegen Stockfish – ohne Theorie, jeder Zug wird bewertet.'};
-  renderTrainer();
-  const fen=T.game.fen();
+function startPlay(S){
+  const gen=S.gen;
+  S.phase='play';S.busy=true;
+  S.play={left:PLAY_MOVES,moves:[],pre:null,pv:null,pvFen:null,failed:false};
+  S.msg={k:'',t:'Jetzt '+PLAY_MOVES+' Züge gegen Stockfish – ohne Theorie, jeder Zug wird bewertet.'};
+  paint(S);
+  const fen=S.game.fen();
   Eng.analyse(fen).then(a=>{
-    if(gen!==T.gen)return;
-    setEval(a,fen);
-    if(T.game.turn()!==T.side)botMove(a);
-    else{T.play.pre=a;T.busy=false;T.msg={k:'you',t:'Dein Zug – finde den besten Plan.'};renderTrainer()}
-  }).catch(()=>{if(gen!==T.gen)return;T.play.failed=true;endPlay()});
+    if(gen!==S.gen)return;
+    setEval(S,a,fen);
+    if(S.game.turn()!==S.side)botMove(S,a);
+    else{S.play.pre=a;S.busy=false;S.msg={k:'you',t:'Dein Zug – finde den besten Plan.'};paint(S)}
+  }).catch(()=>{if(gen!==S.gen)return;S.play.failed=true;endPlay(S)});
 }
-function botMove(a){
-  const gen=T.gen;
-  if(!a.best){endPlay();return}
-  const san=uciToMove(T.game.fen(),a.best).san;
-  T.busy=true;
-  setTimeout(()=>animateMove(san,()=>{
-    if(gen!==T.gen)return;
-    const m=T.game.move(san);T.last=[m.from,m.to];
-    T.msg={k:'',t:'Stockfish spielt '+de(m.san)+' …'};
-    renderTrainer();
-    if(T.game.game_over()){endPlay();return}
-    const fen=T.game.fen();
+function botMove(S,a){
+  const gen=S.gen;
+  if(!a.best){endPlay(S);return}
+  const san=uciToMove(S.game.fen(),a.best).san;
+  S.busy=true;
+  setTimeout(()=>animateMove(S,san,()=>{
+    if(gen!==S.gen)return;
+    const m=S.game.move(san);S.last=[m.from,m.to];
+    S.msg={k:'',t:'Stockfish spielt '+de(m.san)+' …'};
+    paint(S);
+    if(S.game.game_over()){endPlay(S);return}
+    const fen=S.game.fen();
     Eng.analyse(fen).then(b=>{
-      if(gen!==T.gen)return;
-      setEval(b,fen);T.play.pre=b;T.busy=false;
-      T.msg={k:'you',t:'Stockfish spielt '+de(m.san)+'. Dein Zug'+(T.play.left===1?' – der letzte.':'.')};
-      renderTrainer();
-    }).catch(()=>{T.play.failed=true;endPlay()});
+      if(gen!==S.gen)return;
+      setEval(S,b,fen);S.play.pre=b;S.busy=false;
+      S.msg={k:'you',t:'Stockfish spielt '+de(m.san)+'. Dein Zug'+(S.play.left===1?' – der letzte.':'.')};
+      paint(S);
+    }).catch(()=>{if(gen!==S.gen)return;S.play.failed=true;endPlay(S)});
   }),350);
 }
-function playMove(from,to){
-  const gen=T.gen;
-  const before=T.game.fen(),pre=T.play.pre;
-  const m=T.game.move({from,to,promotion:'q'});
-  if(!m){T.sel=null;renderBoard();return}
-  T.last=[m.from,m.to];T.sel=null;T.busy=true;T.play.left--;
-  T.msg={k:'',t:'Stockfish prüft '+de(m.san)+' …'};
-  renderTrainer();
-  const fen=T.game.fen();
+function playMove(S,from,to){
+  const gen=S.gen;
+  const before=S.game.fen(),pre=S.play.pre;
+  const m=S.game.move({from,to,promotion:'q'});
+  if(!m){S.sel=null;renderBoard();return}
+  S.last=[m.from,m.to];S.sel=null;S.busy=true;S.play.left--;
+  S.msg={k:'',t:'Stockfish prüft '+de(m.san)+' …'};
+  paint(S);
+  const fen=S.game.fen();
   const done=a=>{
-    if(gen!==T.gen)return;
+    if(gen!==S.gen)return;
     const uci=m.from+m.to+(m.promotion||'');
     const bestCp=cpOf(pre);
     // Liegt der Zug unter Stockfishs Top-3, zählt dessen Wert aus derselben Suche (weniger Rauschen)
-    const after=uci in pre.cand?pre.cand[uci]:a?-cpOf(a):(T.game.in_checkmate()?10000:0); // aus Sicht des Spielers
+    const after=uci in pre.cand?pre.cand[uci]:a?-cpOf(a):(S.game.in_checkmate()?10000:0); // aus Sicht des Spielers
     const isBest=pre.best===uci;
     const loss=Math.max(0,bestCp-after);
     const r=isBest?[0,'Bester Zug','best']:RATE.find(x=>loss<=x[0]);
     const bestSan=!isBest&&loss>15&&pre.best?de(uciToMove(before,pre.best).san):null;
-    T.play.moves.push({san:m.san,label:r[1],cls:r[2],loss,bestSan,after});
-    if(a)setEval(a,fen);else T.evW=T.side==='w'?after:-after;
-    flash(m.to,r[2]==='best'||r[2]==='good'||r[2]==='ok'?'right':'wrong');
-    T.msg={k:r[2]==='inacc'||r[2]==='bad'?'err':'ok',t:de(m.san)+': '+r[1]+(bestSan?' – besser war '+bestSan:'')};
-    if(!a||T.game.game_over()||T.play.left<=0){T.play.pv=a?a.pv:null;T.play.pvFen=fen;endPlay();return}
-    renderTrainer();
-    botMove(a);
+    S.play.moves.push({san:m.san,label:r[1],cls:r[2],loss,bestSan,after});
+    if(a)setEval(S,a,fen);else S.evW=S.side==='w'?after:-after;
+    if(live(S))flash(m.to,r[2]==='best'||r[2]==='good'||r[2]==='ok'?'right':'wrong');
+    S.msg={k:r[2]==='inacc'||r[2]==='bad'?'err':'ok',t:de(m.san)+': '+r[1]+(bestSan?' – besser war '+bestSan:'')};
+    if(!a||S.game.game_over()||S.play.left<=0){S.play.pv=a?a.pv:null;S.play.pvFen=fen;endPlay(S);return}
+    paint(S);
+    botMove(S,a);
   };
-  if(T.game.game_over()){done(null);return}
-  Eng.analyse(fen).then(done).catch(()=>{T.play.failed=true;endPlay()});
+  if(S.game.game_over()){done(null);return}
+  Eng.analyse(fen).then(done).catch(()=>{if(gen!==S.gen)return;S.play.failed=true;endPlay(S)});
 }
-function endPlay(){
-  T.phase='end';T.busy=false;
-  renderTrainer();
-  setTimeout(()=>{const d=$('.play');if(d)d.scrollIntoView({behavior:'smooth',block:'start'})},250);
+function endPlay(S){
+  S.phase='end';S.busy=false;
+  paint(S);
+}
+
+/* ---------- Partie: Eröffnung nach Theorie, dann freie Partie gegen den Bot ---------- */
+const LEVELS=[
+  {n:'Anfänger',d:'macht viele Fehler',skill:0,depth:1,ms:100},
+  {n:'Gelegenheitsspieler',d:'übersieht oft Taktik',skill:3,depth:3,ms:200},
+  {n:'Vereinsspieler',d:'solide, mit Schwächen',skill:7,depth:6,ms:300},
+  {n:'Fortgeschritten',d:'spielt sauber',skill:11,depth:10,ms:500},
+  {n:'Stark',d:'kaum Fehler',skill:15,depth:14,ms:800},
+  {n:'Meister',d:'sehr stark',skill:18,depth:18,ms:1200},
+  {n:'Maximum',d:'volle Stockfish-Stärke',j:'Empfehlung: Beten',skill:20,depth:30,ms:1800}];
+function startGame(id){
+  const S=TG,L=OP[id].L;
+  S.pool=L;S.count=0;T=S;
+  nextLine(S,L[Math.floor(Math.random()*L.length)]); // der Bot wählt eine zufällige Variante
+  if(location.hash!=='#partie')location.hash='#partie';else route();
+}
+function quitGame(S){clearGame();S.line=null;S.gen=++GEN;S.busy=false;paint(S)}
+function chooseLevel(S,i){
+  S.level=i;S.phase='game';saveGame(S);
+  if(S.game.turn()!==S.side)gameBot(S);
+  else{S.msg={k:'you',t:'Du bist am Zug. Viel Erfolg!'};paint(S)}
+}
+function gameMove(S,from,to){
+  const m=S.game.move({from,to,promotion:'q'});
+  if(!m){S.sel=null;renderBoard();return}
+  S.last=[m.from,m.to];S.sel=null;S.sure=false;saveGame(S);
+  if(checkOver(S))return;
+  gameBot(S);
+}
+function gameBot(S){
+  const gen=S.gen,L=LEVELS[S.level],fen=S.game.fen(),t0=Date.now();
+  S.busy=true;S.msg={k:'',t:'Der Bot denkt …'};paint(S);
+  Eng.analyse(fen,{ms:L.ms,depth:L.depth,skill:L.skill,multipv:1}).then(a=>{
+    if(gen!==S.gen)return;
+    setEval(S,a,fen);
+    if(!a.best){S.busy=false;checkOver(S);return}
+    const san=uciToMove(fen,a.best).san;
+    setTimeout(()=>animateMove(S,san,()=>{
+      if(gen!==S.gen)return;
+      const m=S.game.move(san);S.last=[m.from,m.to];S.busy=false;saveGame(S);
+      if(checkOver(S))return;
+      S.msg={k:'you',t:'Bot spielt '+de(m.san)+(S.game.in_check()?' – Schach!':'.')+' Dein Zug.'};
+      paint(S);
+    }),Math.max(0,450-(Date.now()-t0)));
+  }).catch(()=>{if(gen!==S.gen)return;S.busy=false;S.msg={k:'err',t:'Der Bot konnte nicht geladen werden (keine Verbindung?).'};paint(S)});
+}
+function checkOver(S,resigned){
+  const g=S.game;let res=null,why='';
+  if(resigned){res='loss';why='Aufgegeben'}
+  else if(g.in_checkmate()){res=g.turn()===S.side?'loss':'win';why='Schachmatt'}
+  else if(g.in_stalemate()){res='draw';why='Patt'}
+  else if(g.in_threefold_repetition()){res='draw';why='Dreifache Stellungswiederholung'}
+  else if(g.insufficient_material()){res='draw';why='Zu wenig Material zum Mattsetzen'}
+  else if(g.in_draw()){res='draw';why='50-Züge-Regel'}
+  if(!res)return false;
+  S.over={res,why};S.busy=false;S.phase='over';S.sel=null;
+  if(why==='Schachmatt')S.evW=(res==='win')===(S.side==='w')?10000:-10000;
+  P.games=P.games||[];
+  P.games.push({id:Date.now(),d:today(),op:S.line.op,v:S.line.name,lvl:S.level,res,n:Math.ceil(g.history().length/2)});
+  if(P.games.length>200)P.games=P.games.slice(-200);
+  P.days[today()]=(P.days[today()]||0)+1;
+  save();clearGame();
+  S.msg={k:res==='loss'?'err':res==='win'?'ok':'',t:{win:'Gewonnen',loss:'Verloren',draw:'Remis'}[res]+' – '+why+'.'};
+  paint(S);
+  return true;
+}
+// laufende Partie überlebt Neuladen und App-Wechsel
+function saveGame(S){
+  if(!S.line||S.phase==='over')return;
+  try{localStorage.setItem(SK+'-game',JSON.stringify({key:S.line.key,op:S.line.op,moves:S.game.history(),phase:S.phase,level:S.level}))}catch(e){}
+}
+function clearGame(){try{localStorage.removeItem(SK+'-game')}catch(e){}}
+function restoreGame(){
+  let g=null;try{g=JSON.parse(localStorage.getItem(SK+'-game')||'null')}catch(e){}
+  if(!g||!OP[g.op])return;
+  const line=OP[g.op].L.find(l=>l.key===g.key);if(!line){clearGame();return}
+  const S=TG;S.pool=OP[g.op].L;resetState(S,line);S.count=1;
+  for(const m of g.moves)if(!S.game.move(m)){clearGame();S.line=null;return}
+  const h=S.game.history({verbose:true}),lm=h[h.length-1];if(lm)S.last=[lm.from,lm.to];
+  S.ply=Math.min(g.moves.length,line.moves.length);
+  S.phase=g.phase;S.level=g.level;S.finished=g.phase!=='line';
+  S.msg={k:'you',t:'Deine Partie geht weiter.'};
+  if(S.phase==='line')opponent(S);
+  else if(S.phase==='pick')finish(S);
+  else if(S.phase==='game'){
+    if(S.game.turn()!==S.side)gameBot(S);
+    else{const gen=S.gen,fen=S.game.fen();Eng.analyse(fen,{ms:800}).then(a=>{if(gen!==S.gen)return;setEval(S,a,fen);paint(S)}).catch(()=>{})}
+  }
 }
 
 /* ---------- Brett ---------- */
 const FILES='abcdefgh';
+const inView=sel=>document.querySelector('#'+T.view+' '+sel);
+const boardEl=()=>inView('.board');
 function squares(){
   const out=[];
   for(let r=0;r<8;r++)for(let f=0;f<8;f++){
@@ -673,10 +855,12 @@ function squares(){
   return out;
 }
 function renderBoard(){
-  const el=$('#board');if(!el)return;
+  const el=boardEl();if(!el)return;
   const g=T.game, sqs=squares();
   let hintSq=null;
-  if(T.phase==='line'&&userTurn()&&T.hintLvl>=2){const e=g.move(expected());g.undo();hintSq=e.from}
+  if(T.phase==='line'&&userTurn(T)&&T.hintLvl>=2){const e=g.move(expected(T));g.undo();hintSq=e.from}
+  let checkSq=null;
+  if(g.in_check())sqs.forEach(s=>{const p=g.get(s);if(p&&p.type==='k'&&p.color===g.turn())checkSq=s});
   const tg=new Map();
   if(T.sel)g.moves({square:T.sel,verbose:true}).forEach(m=>tg.set(m.to,!!m.captured));
   el.innerHTML=sqs.map((s,i)=>{
@@ -687,6 +871,7 @@ function renderBoard(){
     if(T.last&&T.last.includes(s))c+=' last';
     if(T.sel===s)c+=' sel';
     if(hintSq===s)c+=' hint';
+    if(checkSq===s)c+=' chk';
     if(tg.has(s))c+=' tgt'+(tg.get(s)?' cap':'');
     const col=i%8, row=Math.floor(i/8);
     return '<div class="'+c+'" data-s="'+s+'">'+
@@ -694,10 +879,11 @@ function renderBoard(){
       (p?'<span class="pc '+p.color+'">'+GLYPH[p.type]+'︎</span>':'')+'</div>';
   }).join('');
 }
-function sqEl(s){return document.querySelector('.sq[data-s="'+s+'"]')}
+function sqEl(s){return inView('.sq[data-s="'+s+'"]')}
 function flash(s,k){const e=sqEl(s);if(!e)return;e.classList.add(k);setTimeout(()=>e.classList.remove(k),900)}
-function animateMove(san,done){
-  const m=T.game.move(san);T.game.undo();
+function animateMove(S,san,done){
+  if(!live(S)){done();return}
+  const m=S.game.move(san);S.game.undo();
   const a=sqEl(m.from),b=sqEl(m.to);
   const pc=a&&a.querySelector('.pc');
   if(!pc||!b){done();return}
@@ -707,7 +893,7 @@ function animateMove(san,done){
   setTimeout(done,240);
 }
 function squareAt(x,y){
-  const el=$('#board');if(!el)return null;
+  const el=boardEl();if(!el)return null;
   const r=el.getBoundingClientRect();
   if(x<r.left||y<r.top||x>=r.right||y>=r.bottom)return null;
   const c=Math.floor((x-r.left)/r.width*8),w=Math.floor((y-r.top)/r.height*8);
@@ -715,7 +901,7 @@ function squareAt(x,y){
 }
 let drag=null;
 function onDown(e){
-  const s=squareAt(e.clientX,e.clientY);if(!s||!userTurn()||T.busy)return;
+  const s=squareAt(e.clientX,e.clientY);if(!s||!userTurn(T))return;
   const p=T.game.get(s);
   if(T.sel&&s!==T.sel&&!(p&&p.color===T.side)){tryMove(T.sel,s);return}
   if(!p||p.color!==T.side){T.sel=null;renderBoard();return}
@@ -747,12 +933,26 @@ function onUp(e){
 }
 
 /* ---------- Ansichten ---------- */
+// kleines Brett mit der Erkennungsstellung einer Eröffnung
+function miniBoard(o){
+  const g=new Chess();o.fig.split(' ').forEach(m=>g.move(m));
+  const b=g.board(),h=g.history({verbose:true}),lm=h[h.length-1];
+  let out='';
+  for(let r=0;r<8;r++)for(let f=0;f<8;f++){
+    const rr=o.side==='w'?r:7-r,ff=o.side==='w'?f:7-f,p=b[rr][ff],sq=FILES[ff]+(8-rr);
+    out+='<i class="'+((rr+ff)%2===0?'l':'d')+(lm&&(lm.from===sq||lm.to===sq)?' lm':'')+'">'+(p?'<b class="'+p.color+'">'+GLYPH[p.type]+'︎</b>':'')+'</i>';
+  }
+  return '<div class="mini" aria-hidden="true">'+out+'</div>';
+}
 function userCp(){return T.evW===null?0:(T.side==='w'?T.evW:-T.evW)}
 function evBar(){
   const cp=userCp(),wp=100/(1+Math.pow(10,-Math.max(-2000,Math.min(2000,cp))/400));
   const lbl=T.evW===null?'':fmtEv(cp);
   return '<div class="evbar'+(T.side==='b'?' flip':'')+'" title="Bewertung aus deiner Sicht"><i style="height:'+wp.toFixed(1)+'%"></i>'+
     (lbl?'<span class="'+(cp>=0?'lo':'hi')+'">'+lbl+'</span>':'')+'</div>';
+}
+function verdictText(cp){
+  return Math.abs(cp)<40?'Ausgeglichen':cp>0?(cp<150?'Du stehst etwas besser':cp<400?'Du stehst klar besser':'Du stehst auf Gewinn'):(cp>-150?'Der Gegner steht etwas besser':cp>-400?'Der Gegner steht klar besser':'Der Gegner steht auf Gewinn');
 }
 function playCard(){
   const p=T.play;if(!p)return '';
@@ -765,64 +965,98 @@ function playCard(){
     body='<p class="small muted" style="margin:6px 0 4px">Zug '+(PLAY_MOVES-p.left+(T.game.turn()===T.side?1:0))+' von '+PLAY_MOVES+(T.busy?' · <span class="think"></span> Stockfish rechnet':'')+'</p>'+rows;
   }else{
     const cp=userCp();
-    const verdict=Math.abs(cp)<40?'Ausgeglichen':cp>0?(cp<150?'Du stehst etwas besser':cp<400?'Du stehst klar besser':'Du stehst auf Gewinn'):(cp>-150?'Der Gegner steht etwas besser':cp>-400?'Der Gegner steht klar besser':'Der Gegner steht auf Gewinn');
-    body='<p style="margin:8px 0 2px;font-weight:600">'+verdict+' ('+fmtEv(cp)+')</p>'+
+    body='<p style="margin:8px 0 2px;font-weight:600">'+verdictText(cp)+' ('+fmtEv(cp)+')</p>'+
       '<p class="small muted" style="margin-bottom:4px">Bewertung aus deiner Sicht, + = Vorteil für dich.</p>'+rows+
       (p.pv&&p.pv.length?'<div style="margin-top:10px"><b style="font-family:var(--display);letter-spacing:.06em;text-transform:uppercase;font-size:14px">So geht’s weiter</b><p class="pv">'+pvText(p.pvFen,p.pv,8)+'</p><p class="small muted">Stockfishs beste Fortsetzung aus der Endstellung.</p></div>':'');
   }
   return '<div class="card play"><h2>Gegen Stockfish</h2>'+body+'</div>';
 }
+function gameSetup(){
+  const g=(P.games||[]),w=g.filter(x=>x.res==='win').length,d=g.filter(x=>x.res==='draw').length,l=g.filter(x=>x.res==='loss').length;
+  return '<div class="trhead"><div><h1>Partie</h1><p class="sub">Du spielst die Eröffnung nach Theorie, der Bot wählt eine zufällige Variante. Danach stellst du seine Stärke ein und ihr spielt die Partie zu Ende.</p></div>'+
+    (g.length?'<div class="meta"><b>'+w+'–'+d+'–'+l+'</b>S – R – N</div>':'')+'</div>'+
+    OPENINGS.map(o=>'<button class="opg" data-go="'+o.id+'">'+miniBoard(o)+'<div class="info"><div class="row"><h3>'+esc(o.name)+'</h3><span class="tag '+o.side+'">'+(o.side==='w'?'W':'S')+'</span></div>'+
+      '<div class="s">Du spielst '+(o.side==='w'?'Weiß':'Schwarz')+' · '+o.L.length+' mögliche Varianten</div></div><span class="go">Los</span></button>').join('');
+}
 function renderTrainer(){
-  const v=$('#v-ueben');
-  if(!T.line){
+  const S=T,v=document.getElementById(S.view);
+  if(!S.line){
+    if(S.kind==='game'){
+      v.innerHTML=gameSetup();
+      v.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>startGame(b.dataset.go));
+      return;
+    }
     v.innerHTML='<div class="trhead"><div><h1>Bereit?</h1><p class="sub">Wähle eine Eröffnung oder trainiere alles gemischt.</p></div></div>'+
       mixButton()+'<button class="btn sec" onclick="location.hash=\'#liste\'">Eröffnung auswählen</button>'+
       '<div class="card idea"><b>So funktioniert’s</b>Du spielst deine Seite, die App den Gegner – immer aus echter Theorie. Kein Zug wird vorgesagt: Probier aus. Bei Fehlern springt die Figur zurück; nach dem zweiten Versuch gibt es einen Tipp, nach dem dritten wird die Figur markiert. Linien, die du fehlerfrei spielst, kommen seltener, wackelige öfter.</div>';
     return;
   }
-  const o=OP[T.line.op];
-  const st=LS(T.line.key);
-  const mat=material(T.game);
-  const userPlies=[];for(let i=T.side==='w'?0:1;i<T.line.moves.length;i+=2)userPlies.push(i);
-  const dots=userPlies.map(i=>'<i class="'+(i<T.ply?(T.errAt.has(i)?'err':'ok'):(i===T.ply&&!T.finished?'cur':''))+'"></i>').join('');
+  const o=OP[S.line.op],mat=material(S.game),inLine=S.phase==='line',game=S.kind==='game';
+  const userPlies=[];for(let i=S.side==='w'?0:1;i<S.line.moves.length;i+=2)userPlies.push(i);
+  const dots=userPlies.map(i=>'<i class="'+(i<S.ply?(S.errAt.has(i)?'err':'ok'):(i===S.ply&&!S.finished?'cur':''))+'"></i>').join('');
+  let sub,meta;
+  if(game){
+    sub=inLine?'Eröffnungsphase · Variante wählt der Bot':esc(S.line.name)+(S.level!=null?' · Bot: '+LEVELS[S.level].n:'');
+    meta='<b>'+(Math.floor(S.game.history().length/2)+1)+'</b>Zug';
+  }else{
+    sub=esc(o.sub)+(S.mode==='mix'?' · Mix':S.mode&&S.mode.includes('#')?' · '+esc(S.line.name):'')+' · Stufe '+LS(S.line.key).box+'/5';
+    meta='<b>'+S.lineErr+'</b>Fehler<br>Linie '+S.count;
+  }
   let bottom='';
-  if(T.finished){
-    const r=T.result;
+  if(inLine){
+    const hot=S.errHere>=3,ut=userTurn(S);
+    const third=game?'<button id="b-quit">Abbrechen</button>':'<button id="b-skip">'+(S.pool.length>1?'Andere Linie':'Neustart')+'</button>';
+    bottom='<div class="ctrl"><button id="b-hint"'+(ut&&S.hintLvl<2?'':' disabled')+'>Tipp</button>'+
+      '<button id="b-show" class="'+(hot?'hot':'')+'"'+(ut?'':' disabled')+'>Zug zeigen</button>'+third+'</div>';
+  }else if(!game){
+    const r=S.result;
     bottom='<div class="card done'+(r.perfect?'':' meh')+'"><h2>'+(r.perfect?'Fehlerfrei!':'Linie geschafft')+'</h2>'+
-      '<p class="small muted" style="margin-top:6px">'+(r.perfect?'Die Linie rückt auf Stufe '+r.box+' von 5 und kommt seltener dran.':(T.shown?'Mit Lösung – die Linie kommt bald wieder.':T.lineErr+' Fehlversuch'+(T.lineErr===1?'':'e')+' – sie kommt öfter dran, bis sie sitzt.'))+'</p>'+
+      '<p class="small" style="margin-top:6px">Variante: <b>'+esc(S.line.name)+'</b></p>'+
+      '<p class="small muted" style="margin-top:2px">'+(r.perfect?'Die Linie rückt auf Stufe '+r.box+' von 5 und kommt seltener dran.':(S.shown?'Mit Lösung – die Linie kommt bald wieder.':S.lineErr+' Fehlversuch'+(S.lineErr===1?'':'e')+' – sie kommt öfter dran, bis sie sitzt.'))+'</p>'+
       '<div class="row"><button class="btn grow" id="b-next">Nächste Linie</button><button class="btn sec" id="b-again">Nochmal</button></div></div>'+
       playCard();
-  }else{
-    const hot=T.errHere>=3;
-    bottom='<div class="ctrl"><button id="b-hint"'+(userTurn()&&!T.busy&&T.hintLvl<2?'':' disabled')+'>Tipp</button>'+
-      '<button id="b-show" class="'+(hot?'hot':'')+'"'+(userTurn()&&!T.busy?'':' disabled')+'>Zug zeigen</button>'+
-      '<button id="b-skip">Andere Linie</button></div>';
+  }else if(S.phase==='pick'){
+    bottom='<div class="card play"><h2>Bot-Stärke wählen</h2>'+
+      '<p class="small" style="margin:6px 0 2px">Der Bot hat gespielt: <b>'+esc(S.line.name)+'</b></p>'+
+      '<p class="small muted" style="margin-bottom:10px">Ab jetzt gibt es keinen Theorie-Zwang mehr – spiel die Partie zu Ende.</p>'+
+      '<div class="lvls">'+LEVELS.map((L,i)=>'<button data-lvl="'+i+'"><b>'+L.n+'</b><span>Stufe '+(i+1)+' · '+L.d+'</span>'+(L.j?'<em>'+L.j+'</em>':'')+'</button>').join('')+'</div></div>';
+  }else if(S.phase==='game'){
+    bottom='<div class="ctrl one"><button id="b-resign"'+(S.sure?' class="hot"':'')+'>'+(S.sure?'Wirklich aufgeben?':'Aufgeben')+'</button></div>';
+  }else if(S.phase==='over'){
+    const res=S.over.res;
+    bottom='<div class="card done'+(res==='win'?'':' meh')+'"><h2>'+{win:'Gewonnen!',loss:'Verloren',draw:'Remis'}[res]+'</h2>'+
+      '<p class="small" style="margin-top:6px">'+esc(S.over.why)+' nach '+Math.ceil(S.game.history().length/2)+' Zügen · Bot: '+LEVELS[S.level].n+'</p>'+
+      '<p class="small muted" style="margin-top:2px">'+esc(o.name)+' · '+esc(S.line.name)+'</p>'+
+      '<div class="row"><button class="btn grow" id="b-rematch">Revanche</button><button class="btn sec" id="b-new">Andere Eröffnung</button></div></div>';
   }
   v.innerHTML=
     '<div class="trhead"><div><span class="tag '+o.side+'">'+(o.side==='w'?'Weiß':'Schwarz')+'</span>'+
-      '<h1 style="margin-top:6px">'+esc(o.name)+'</h1><p class="sub">'+esc(o.sub)+(T.mode==='mix'?' · Mix':'')+' · Stufe '+st.box+'/5</p></div>'+
-      '<div class="meta"><b>'+T.lineErr+'</b>Fehler<br>Linie '+T.count+'</div></div>'+
-    '<div class="dots" aria-label="Fortschritt in der Linie">'+dots+'</div>'+
-    matRow('Gegner',T.side==='w'?'b':'w',mat)+
-    '<div class="boardwrap'+(T.phase!=='line'?' ev':'')+'">'+(T.phase!=='line'?evBar():'')+'<div class="board" id="board"></div></div>'+
-    matRow('Du',T.side,mat)+
-    '<div class="msg" data-k="'+(T.msg?T.msg.k:'')+'" role="status"><i></i><span>'+esc(T.msg?T.msg.t:'')+'</span></div>'+
-    T.notes.map(x=>'<div class="card idea"><b>'+esc(x.who)+': '+esc(de(x.san))+'</b>'+esc(x.t)+'</div>').join('')+
+      '<h1 style="margin-top:6px">'+esc(o.name)+'</h1><p class="sub">'+sub+'</p></div>'+
+      '<div class="meta">'+meta+'</div></div>'+
+    (inLine?'<div class="dots" aria-label="Fortschritt in der Linie">'+dots+'</div>':'')+
+    matRow(game?'Bot':'Gegner',S.side==='w'?'b':'w',mat)+
+    '<div class="boardwrap'+(inLine?'':' ev')+'">'+(inLine?'':evBar())+'<div class="board"></div></div>'+
+    matRow('Du',S.side,mat)+
+    '<div class="msg" data-k="'+(S.msg?S.msg.k:'')+'" role="status"><i></i><span>'+esc(S.msg?S.msg.t:'')+'</span>'+(game&&S.busy&&S.phase==='game'?' <span class="think"></span>':'')+'</div>'+
+    (inLine||!game?S.notes.map(x=>'<div class="card idea"><b>'+esc(x.who)+': '+esc(de(x.san))+'</b>'+esc(x.t)+'</div>').join(''):'')+
     bottom+
-    (T.game.history().length?'<div class="moves">'+moveText(T.game.history(),T.errAt)+'</div>':'')+
+    (S.game.history().length?'<div class="moves">'+moveText(S.game.history(),inLine||!game?S.errAt:null)+'</div>':'')+
     '<details class="card"><summary>Idee der Eröffnung</summary><p>'+esc(o.idea)+'</p></details>';
   renderBoard();
-  const b=$('#board');
-  b.addEventListener('pointerdown',onDown);
-  const on=(id,f)=>{const x=document.getElementById(id);if(x)x.onclick=f};
-  on('b-hint',hint);on('b-show',show);on('b-skip',()=>nextLine());
-  on('b-next',()=>nextLine());on('b-again',()=>nextLine(T.line));
+  boardEl().addEventListener('pointerdown',onDown);
+  const on=(id,f)=>{const x=v.querySelector('#'+id);if(x)x.onclick=f};
+  on('b-hint',hint);on('b-show',show);on('b-skip',()=>nextLine(S));
+  on('b-next',()=>nextLine(S));on('b-again',()=>nextLine(S,S.line));
+  on('b-quit',()=>quitGame(S));on('b-new',()=>quitGame(S));on('b-rematch',()=>startGame(S.line.op));
+  on('b-resign',()=>{if(S.sure){S.sure=false;checkOver(S,true)}else{S.sure=true;renderTrainer();setTimeout(()=>{if(S.sure&&S.phase==='game'){S.sure=false;paint(S)}},3000)}});
+  v.querySelectorAll('[data-lvl]').forEach(b=>b.onclick=()=>chooseLevel(S,+b.dataset.lvl));
 }
 function mixButton(){
   const all=OPENINGS.flatMap(o=>o.L),mm=mastery(all);
   return '<button class="mix" onclick="startMode(\'mix\')"><div><b>Alles gemischt</b><span>'+mm.m+' von '+mm.n+' Linien sitzen · wackelige zuerst</span></div><span class="arr">→</span></button>';
 }
 let filter='all';
+let openOps=new Set();
 function renderList(){
   const v=$('#v-liste');
   const ops=OPENINGS.filter(o=>filter==='all'||o.side===filter);
@@ -830,11 +1064,28 @@ function renderList(){
     '<div class="seg" role="group">'+[['all','Alle'],['w','Mit Weiß'],['b','Mit Schwarz']].map(([k,t])=>'<button data-f="'+k+'" aria-pressed="'+(filter===k)+'">'+t+'</button>').join('')+'</div>'+
     '<div class="legend"><span><i style="background:var(--good)"></i>sitzt</span><span><i style="background:var(--warn)"></i>in Arbeit</span></div>'+
     ops.map(o=>{const m=mastery(o.L);
-      return '<button class="op" data-op="'+o.id+'"><div><div class="row"><h3>'+esc(o.name)+'</h3><span class="tag '+o.side+'">'+(o.side==='w'?'W':'S')+'</span></div>'+
-      '<div class="s">'+esc(o.sub)+' · '+m.n+' Linien · '+m.m+' sitzen</div></div><span class="go">Üben</span>'+
-      '<div class="bar"><i class="m" style="width:'+(m.m/m.n*100)+'%"></i><i class="l" style="width:'+(m.l/m.n*100)+'%"></i></div></button>'}).join('');
+      return '<div class="opc"><div class="opmain">'+miniBoard(o)+
+        '<div class="info"><div class="row"><h3>'+esc(o.name)+'</h3><span class="tag '+o.side+'">'+(o.side==='w'?'W':'S')+'</span></div>'+
+        '<div class="s">'+esc(o.sub)+' · '+m.m+'/'+m.n+' sitzen</div>'+
+        '<div class="bar"><i class="m" style="width:'+(m.m/m.n*100)+'%"></i><i class="l" style="width:'+(m.l/m.n*100)+'%"></i></div></div>'+
+        '<button class="go" data-op="'+o.id+'">Üben</button></div>'+
+        '<details data-d="'+o.id+'"'+(openOps.has(o.id)?' open':'')+'><summary>'+o.L.length+' Varianten einzeln üben</summary><ul class="vars">'+
+        o.L.map((l,i)=>{const st=LS(l.key);
+          return '<li><button data-op="'+o.id+'" data-i="'+i+'"><span class="vn">'+esc(l.name)+'</span>'+
+            '<span class="pips" title="Stufe '+st.box+' von 5">'+[1,2,3,4,5].map(k=>'<i class="'+(k<=st.box?(st.box>=3?'m':'l'):'')+'"></i>').join('')+'</span></button></li>'}).join('')+
+        '</ul></details></div>'}).join('');
   v.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{filter=b.dataset.f;renderList()});
-  v.querySelectorAll('[data-op]').forEach(b=>b.onclick=()=>startMode(b.dataset.op));
+  v.querySelectorAll('[data-op]').forEach(b=>b.onclick=()=>startMode(b.dataset.op,b.dataset.i==null?undefined:+b.dataset.i));
+  v.querySelectorAll('details[data-d]').forEach(d=>d.ontoggle=()=>{if(d.open)openOps.add(d.dataset.d);else openOps.delete(d.dataset.d)});
+}
+function gamesCard(){
+  const g=P.games||[];
+  if(!g.length)return '<div class="card"><h3 class="sect" style="font-size:18px;margin-bottom:6px">Partien gegen den Bot</h3><p class="small muted">Noch keine – starte eine im Tab „Partie“.</p></div>';
+  const c=r=>g.filter(x=>x.res===r).length;
+  const R={win:['S','up'],draw:['R','flat'],loss:['N','down']};
+  return '<div class="card"><h3 class="sect" style="font-size:18px;margin-bottom:6px">Partien gegen den Bot</h3>'+
+    '<div class="tiles" style="margin-bottom:8px"><div class="tile"><b class="up">'+c('win')+'</b><span>Siege</span></div><div class="tile"><b>'+c('draw')+'</b><span>Remis</span></div><div class="tile"><b class="down">'+c('loss')+'</b><span>Niederlagen</span></div></div>'+
+    '<ul class="list">'+g.slice(-6).reverse().map(x=>'<li><div>'+esc(OP[x.op]?OP[x.op].name:x.op)+'<small>'+esc(x.v||'')+' · '+(LEVELS[x.lvl]?LEVELS[x.lvl].n:'')+' · '+x.n+' Züge</small></div><div class="n '+R[x.res][1]+'">'+R[x.res][0]+'</div></li>').join('')+'</ul></div>';
 }
 function renderStats(){
   const v=$('#v-stats');
@@ -852,7 +1103,7 @@ function renderStats(){
       '<div class="bar"><i class="m" style="width:'+(m.m/m.n*100)+'%"></i><i class="l" style="width:'+(m.l/m.n*100)+'%"></i></div></li>'}).join('')+'</ul></div>'+
     '<div class="card"><h3 class="sect" style="font-size:18px;margin-bottom:6px">Problemstellen</h3>'+
     (trouble.length?'<ul class="list">'+trouble.map(([k,x])=>'<li><div>'+esc(OP[x.op].name)+'<small>'+(x.h.length?'nach '+moveText(x.h).replace(/<[^>]+>/g,''):'erster Zug')+'</small></div><div class="n">'+x.err+' ✕</div></li>').join('')+'</ul>':'<p class="small muted">Noch keine – spiel ein paar Linien.</p>')+
-    '</div>'+kontoCard()+'<div><button class="danger" id="b-reset">Fortschritt zurücksetzen</button></div>';
+    '</div>'+gamesCard()+kontoCard()+'<div><button class="danger" id="b-reset">Fortschritt zurücksetzen</button></div>';
   bindKonto();
   const r=$('#b-reset');
   r.onclick=()=>{if(r.dataset.sure){P=Object.assign(emptyP(),{resetAt:Date.now()});save();renderStats()}else{r.dataset.sure='1';r.textContent='Wirklich alles löschen?';setTimeout(()=>{if(r.isConnected){delete r.dataset.sure;r.textContent='Fortschritt zurücksetzen'}},3000)}};
@@ -865,10 +1116,11 @@ function streak(){
 }
 function route(){
   const v=(location.hash||'#ueben').slice(1);
-  const ok=v==='konto'?'stats':['ueben','liste','stats'].includes(v)?v:'ueben';
+  const ok=v==='konto'?'stats':['ueben','liste','partie','stats'].includes(v)?v:'ueben';
+  if(ok==='ueben')T=TT;if(ok==='partie')T=TG;
   document.querySelectorAll('.view').forEach(x=>x.hidden=x.id!=='v-'+ok);
   document.querySelectorAll('.tabs a').forEach(a=>a.setAttribute('aria-current',a.dataset.v===ok?'page':'false'));
-  if(ok==='ueben')renderTrainer();if(ok==='liste')renderList();if(ok==='stats')renderStats();
+  if(ok==='ueben'||ok==='partie')renderTrainer();if(ok==='liste')renderList();if(ok==='stats')renderStats();
   $('#main').scrollTop=0;
   if(v==='konto'){const k=$('#konto');if(k)k.scrollIntoView({block:'start'})}
 }
@@ -919,6 +1171,8 @@ function mergeP(a,b){
     o.pos[k]=!x?y:!y?x:Object.assign({},x,{err:Math.max(x.err,y.err),ok:Math.max(x.ok,y.ok)})});
   keys(a.days,b.days).forEach(k=>{o.days[k]=Math.max((a.days||{})[k]||0,(b.days||{})[k]||0)});
   o.tot={ok:Math.max(a.tot?.ok||0,b.tot?.ok||0),err:Math.max(a.tot?.err||0,b.tot?.err||0)};
+  const gm=new Map();[...(a.games||[]),...(b.games||[])].forEach(g=>gm.set(g.id,g));
+  o.games=[...gm.values()].sort((x,y)=>x.id-y.id).slice(-200);
   return o;
 }
 function scheduleFlush(){if(!syncOn)return;setSync('saving');clearTimeout(ft);ft=setTimeout(sync,800)}
@@ -1002,7 +1256,8 @@ document.addEventListener('visibilitychange',()=>{
 window.addEventListener('hashchange',route);
 window.addEventListener('keydown',e=>{if(e.key==='Escape'&&T.sel){T.sel=null;renderBoard()}});
 let lastMode=null;try{lastMode=localStorage.getItem(SK+'-mode')}catch(e){}
-if(lastMode&&(lastMode==='mix'||OP[lastMode])){T.mode=lastMode;T.pool=lastMode==='mix'?OPENINGS.flatMap(o=>o.L):OP[lastMode].L;T.count=0;nextLine()}
+if(lastMode&&setPool(TT,lastMode)){TT.count=0;nextLine(TT)}
+restoreGame();
 fromEmailLink();
 route();
 if(auth)startCloud();
