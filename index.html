@@ -383,6 +383,23 @@ details p{font-size:14px;color:var(--ink-2)}
 .pchart .dot{fill:var(--surface);stroke:var(--copper);stroke-width:2}
 .pchart .xh{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
 
+/* Erklärung und eigene Variante */
+.sqb{pointer-events:auto;cursor:pointer;transition:transform .12s}
+.sqb:hover{transform:scale(1.12)}
+.badgebtn{border:0;background:none;padding:0;border-radius:50%;flex:none;transition:transform .12s}
+.badgebtn:hover{transform:scale(1.08)}
+.card-h h3 .badge,.card-h h3 .ic{vertical-align:-5px;margin-right:6px}
+.why{border-color:var(--line-2)}
+.wline{padding-top:6px}
+.wline+.wline{margin-top:6px;border-top:1px solid var(--line)}
+.wfoot{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:6px}
+.vnote{border-left:3px solid var(--copper)}
+.vnote .vline{max-height:none;margin:8px 0 6px;padding:6px;background:var(--bg-2);border-radius:var(--r-s)}
+.mvb.base{box-shadow:inset 0 0 0 1px var(--copper)}
+.navgrp .xbtn{min-width:72px;border-left:1px solid var(--line-2);background:var(--copper-soft);color:var(--copper)}
+.navgrp .xbtn:hover{background:rgba(196,135,90,.28)!important;color:var(--ink)}
+.navgrp .xbtn .ic{width:22px;height:22px}
+
 /* ---------- Große Bildschirme ---------- */
 @media (min-width:760px){
   .grid2{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -733,6 +750,7 @@ function bookMoves(S){
 }
 const expected=S=>S.line.moves[S.ply];
 function userTurn(S){
+  if(S.phase==='review')return !!TA.gid&&!S.busy;
   if(!S.line||S.busy)return false;
   const g=S.game;
   if(S.phase==='line')return !S.finished&&g.turn()===S.side&&S.ply<S.line.moves.length;
@@ -765,6 +783,7 @@ function opponent(S){
 function tryMove(from,to){
   const S=T;
   if(!userTurn(S))return;
+  if(S.phase==='review'){reviewMove(from,to);return}
   if(S.phase==='play'){playMove(S,from,to);return}
   if(S.phase==='game'){gameMove(S,from,to);return}
   const m=S.game.move({from,to,promotion:'q'});
@@ -1052,6 +1071,7 @@ function renderBoard(){
       (row===7?'<span class="co f">'+s[0]+'</span>':'')+(col===0?'<span class="co r">'+s[1]+'</span>':'')+
       (p?'<span class="pc '+p.color+'">'+GLYPH[p.type]+'︎</span>':'')+'</div>';
   }).join('');
+  if(T.phase==='review')reviewDecorate();
 }
 function sqEl(s){return inView('.sq[data-s="'+s+'"]')}
 function flash(s,k){const e=sqEl(s);if(!e)return;e.classList.add(k);setTimeout(()=>e.classList.remove(k),900)}
@@ -1075,10 +1095,11 @@ function squareAt(x,y){
 }
 let drag=null;
 function onDown(e){
+  if(T.phase==='review'&&e.target.closest('.sqb')){e.preventDefault();openWhy();return}
   const s=squareAt(e.clientX,e.clientY);if(!s||!userTurn(T))return;
-  const p=T.game.get(s);
-  if(T.sel&&s!==T.sel&&!(p&&p.color===T.side)){tryMove(T.sel,s);return}
-  if(!p||p.color!==T.side){T.sel=null;renderBoard();return}
+  const p=T.game.get(s),mc=T.phase==='review'?T.game.turn():T.side; // im Analysemodus zieht die Seite am Zug
+  if(T.sel&&s!==T.sel&&!(p&&p.color===mc)){tryMove(T.sel,s);return}
+  if(!p||p.color!==mc){T.sel=null;renderBoard();return}
   e.preventDefault();
   const wasSel=T.sel===s;
   T.sel=s;renderBoard();
@@ -1444,13 +1465,14 @@ function paintA(full){
 }
 function reviewGo(k){
   const g=gameById(TA.gid);if(!g||!g.moves)return;
+  stopAuto();TA.vr=null;
   TA.k=Math.max(0,Math.min(g.moves.length,k));
   const m=$('#main'),y=m.scrollTop;renderAnalyse(true);m.scrollTop=y;
 }
 function renderAnalyse(keepScroll){
   const v=$('#v-analyse'),id=+((location.hash.split('/')[1])||0),g=id?gameById(id):null;
   if(g&&g.moves){
-    if(TA.gid!==id){TA.gid=id;TA.k=g.moves.length}
+    if(TA.gid!==id){TA.gid=id;TA.k=g.moves.length;TA.vr=null;TA.why=null;stopAuto()}
     renderReview(v,g);
   }else{TA.gid=null;renderProgress(v)}
 }
@@ -1516,30 +1538,144 @@ function renderProgress(v){
   const tg=v.querySelector('#b-toGame');if(tg)tg.onclick=()=>{location.hash='#partie'};
   bindChart(v,an);
 }
+/* ---------- Nachspielen: eigene Varianten und Erklärungen ---------- */
+// TA.vr = {base, moves, idx} : Variante ab Spielstellung base (Halbzug), idx = gezeigte Variantenzüge
+// TA.why = {i, after, before, err} : Erklärung zum Partiezug i
+const evCache={};
+let autoT=null;
+function stopAuto(){clearInterval(autoT);autoT=null}
+function reviewPosition(g){
+  const c=new Chess(),base=TA.vr?TA.vr.base:TA.k;
+  for(let i=0;i<base;i++)c.move(g.moves[i]);
+  if(TA.vr)for(let i=0;i<TA.vr.idx;i++)c.move(TA.vr.moves[i]);
+  return c;
+}
+function varGo(idx){
+  if(!TA.vr)return;
+  stopAuto();
+  TA.vr.idx=Math.max(0,Math.min(TA.vr.moves.length,idx));
+  const m=$('#main'),y=m.scrollTop;renderAnalyse(true);m.scrollTop=y;
+}
+function exitVar(){
+  stopAuto();TA.vr=null;
+  const m=$('#main'),y=m.scrollTop;renderAnalyse(true);m.scrollTop=y;
+}
+// Figur im Analysemodus gezogen: Partiezug folgen oder eigene Variante anlegen
+function reviewMove(from,to){
+  const g=gameById(TA.gid);if(!g)return;
+  const m=TA.game.move({from,to,promotion:'q'});TA.sel=null;
+  if(!m){renderBoard();return}
+  stopAuto();
+  if(!TA.vr&&g.moves[TA.k]===m.san){reviewGo(TA.k+1);return}
+  if(!TA.vr)TA.vr={base:TA.k,moves:[],idx:0};
+  if(TA.vr.idx<TA.vr.moves.length&&TA.vr.moves[TA.vr.idx]===m.san){varGo(TA.vr.idx+1);return}
+  TA.vr.moves=TA.vr.moves.slice(0,TA.vr.idx);TA.vr.moves.push(m.san);TA.vr.idx++;
+  const mm=$('#main'),y=mm.scrollTop;renderAnalyse(true);mm.scrollTop=y;
+}
+// Linie aus der Erklärung auf dem Brett abspielen
+function playLine(base,moves){
+  stopAuto();
+  TA.vr={base,moves:moves.slice(),idx:0};
+  const mm=$('#main'),y=mm.scrollTop;renderAnalyse(true);mm.scrollTop=y;
+  autoT=setInterval(()=>{
+    if(!TA.vr||TA.vr.idx>=TA.vr.moves.length||$('#v-analyse').hidden){stopAuto();return}
+    TA.vr.idx++;const m2=$('#main'),y2=m2.scrollTop;renderAnalyse(true);m2.scrollTop=y2;
+  },900);
+}
+function uciLine(fen,pv,n){const c=new Chess(fen),out=[];for(const u of (pv||[]).slice(0,n)){const m=c.move({from:u.slice(0,2),to:u.slice(2,4),promotion:u[4]||'q'});if(!m)break;out.push(m.san)}return out}
+// Bewertung (Sicht Weiß) für eine beliebige Stellung, mit Zwischenspeicher
+function evalFen(fen,done){
+  if(evCache[fen]){done&&done();return}
+  const c=new Chess(fen);
+  if(c.game_over()){evCache[fen]={w:c.in_checkmate()?(c.turn()==='w'?-10000:10000):0,best:null,pv:[]};done&&done();return}
+  Eng.analyse(fen,{ms:700,multipv:1}).then(a=>{const cp=cpOf(a);evCache[fen]={w:fen.split(' ')[1]==='w'?cp:-cp,best:a.best,pv:a.pv||[]};done&&done()}).catch(()=>{});
+}
+function openWhy(){
+  const g=gameById(TA.gid);if(!g||!g.an||TA.vr||TA.k<1)return;
+  const i=TA.k-1;
+  if(TA.why&&TA.why.i===i){TA.why=null;renderAnalyse(true);return}
+  TA.why={i,after:null,before:null};
+  const before=posFen(g,i),after=posFen(g,i+1),w=TA.why;
+  const redraw=()=>{if(TA.why===w&&!$('#v-analyse').hidden){const m=$('#main'),y=m.scrollTop;renderAnalyse(true);m.scrollTop=y}};
+  redraw();
+  const run=(fen,key)=>{
+    const c=new Chess(fen);
+    if(c.game_over()){w[key]={cp:c.in_checkmate()?-10000:0,pv:[],fen};redraw();return Promise.resolve()}
+    return Eng.analyse(fen,{ms:1100,multipv:1}).then(a=>{w[key]={cp:cpOf(a),pv:a.pv||[],fen};redraw()});
+  };
+  run(after,'after').then(()=>run(before,'before')).catch(()=>{w.err=true;redraw()});
+}
+// Erklärungskarte zum aktuellen Partiezug
+function whyCard(g,cls){
+  const w=TA.why;if(!w||w.i!==TA.k-1||TA.vr)return '';
+  const i=w.i,k=cls[i],C=CLS[k],mover=i%2===0?'w':'b',who=mover===g.side?'du':'der Bot',san=de(g.moves[i]);
+  const bad=['inacc','mist','blund'].includes(k);
+  const uv=(cp,fen)=>{const u=fen.split(' ')[1]===g.side?cp:-cp;return fmtEv(u)};
+  let h='<div class="card why"><div class="card-h"><h3>'+badge(k)+' '+(bad?'Warum '+C.n.replace('Patzer','ein Patzer').replace('Fehler','ein Fehler').replace('Ungenauigkeit','ungenau')+'?':C.n)+'</h3>'+
+    '<button class="btn ghost sm" id="b-whyx" title="Erklärung schließen" aria-label="Erklärung schließen">'+I('x')+'</button></div>';
+  if(w.err)return h+'<p class="small muted">Stockfish konnte nicht rechnen (keine Verbindung?).</p></div>';
+  const lineRow=(title,text,fen,pv,base,id,ev)=>'<div class="wline"><p class="sub-h">'+title+'</p><p class="pv">'+pvText(fen,pv,7)+'</p>'+
+    '<div class="wfoot"><span class="small muted">Bewertung danach: '+ev+' aus deiner Sicht</span>'+btn(id,'play','Am Brett zeigen',{v:'sec',cls:'sm'})+'</div>'+(text?'<p class="small muted">'+text+'</p>':'')+'</div>';
+  if(!w.after)return h+'<p class="small" style="display:flex;gap:8px;align-items:center"><span class="think"></span>Stockfish rechnet die Linie …</p></div>';
+  const a=w.after;
+  if(bad){
+    h+='<p class="small">'+(mover===g.side?'Nach deinem <b>'+esc(san)+'</b> hat der Bot eine starke Antwort:':'Nach <b>'+esc(san)+'</b> hättest du so antworten können:')+'</p>'+
+      lineRow('Die Widerlegung','',a.fen,a.pv,i+1,'b-wline-a',uv(a.cp,a.fen));
+    if(w.before&&w.before.pv.length){const b=w.before;
+      h+=lineRow('Besser war '+esc(de(uciToMove(b.fen,b.pv[0]).san)),'',b.fen,b.pv,i,'b-wline-b',uv(b.cp,b.fen));
+    }else if(!w.before)h+='<p class="small muted" style="display:flex;gap:8px;align-items:center;margin-top:10px"><span class="think"></span>Bessere Alternative wird berechnet …</p>';
+  }else{
+    const why={brill:'Ein Opfer, das sich lohnt – das Material kommt zurück oder der Angriff entscheidet.',great:'Der einzige wirklich gute Zug in dieser Stellung – die Alternativen wären deutlich schlechter gewesen.',
+      best:'Genau der Zug, den Stockfish selbst gespielt hätte.',good:'Ein solider Zug, der die Stellung hält.',book:'Ein Theoriezug aus der Eröffnung.'}[k];
+    h+='<p class="small">'+(who==='du'?'Dein Zug ':'Der Zug ')+'<b>'+esc(san)+'</b>: '+why+'</p>'+
+      lineRow('So geht es weiter','',a.fen,a.pv,i+1,'b-wline-a',uv(a.cp,a.fen));
+    if(k==='good'&&w.before&&w.before.pv.length){const b=w.before,bs=uciToMove(b.fen,b.pv[0]).san;
+      if(bs!==g.moves[i])h+=lineRow('Noch etwas genauer: '+esc(de(bs)),'',b.fen,b.pv,i,'b-wline-b',uv(b.cp,b.fen));}
+  }
+  return h+'</div>';
+}
+// Abzeichen auf dem Zielfeld des gezeigten Partiezugs (antippbar)
+function reviewDecorate(){
+  const g=gameById(TA.gid);if(!g||!g.an||TA.vr||TA.k<1||!TA.last)return;
+  const cls=g.an.cls.split(','),sq=sqEl(TA.last[1]);
+  if(sq)sq.insertAdjacentHTML('beforeend',badge(cls[TA.k-1],'sqb').replace('<span ','<span role="button" aria-label="Erklärung zu diesem Zug" '));
+}
 function renderReview(v,g){
   v.classList.remove('narrow');
-  const S=TA,an=g.an,cls=an?an.cls.split(','):null,n=g.moves.length;
-  S.side=g.side;S.line=null;S.sel=null;S.phase='review';
-  const c=new Chess();for(let i=0;i<S.k;i++)c.move(g.moves[i]);
+  const S=TA,an=g.an,cls=an?an.cls.split(','):null,n=g.moves.length,vr=S.vr;
+  S.side=g.side;S.line=null;S.phase='review';S.busy=false;
+  const c=reviewPosition(g);
   S.game=c;
   const h=c.history({verbose:true}),lm=h[h.length-1];S.last=lm?[lm.from,lm.to]:null;
-  S.evW=an?an.ev[S.k]:null;
+  const fen=c.fen();
+  // Bewertung: Partie aus der Analyse, Variante live von Stockfish
+  if(vr){const e=evCache[fen];S.evW=e?e.w:null;if(!e)evalFen(fen,()=>{if(S.game.fen()===fen&&!$('#v-analyse').hidden){const m=$('#main'),y=m.scrollTop;renderAnalyse(true);m.scrollTop=y}})}
+  else S.evW=an?an.ev[S.k]:null;
   const o=OP[g.op]||{name:g.op,side:g.side},mat=material(c);
   const running=AJ&&AJ.id===g.id;
   let state='';
   if(running)state='<div class="card"><p class="small" style="display:flex;gap:8px;align-items:center;margin-bottom:10px"><span class="think"></span>Stockfish analysiert deine Partie … <span id="anatxt" class="muted">Stellung '+AJ.i+' von '+AJ.n+'</span></p><div class="pbar"><i id="anabar" style="width:'+(AJ.i/AJ.n*100)+'%"></i></div><div class="btnrow">'+btn('b-anastop','x','Abbrechen',{v:'sec'})+'</div></div>';
   else if(!an)state='<div class="card"><p class="small">'+(anaErr?esc(anaErr):'Diese Partie ist noch nicht analysiert. Dauer etwa '+Math.max(10,Math.round((n+1)*ANA_MS/1000))+' Sekunden.')+'</p><div class="btnrow">'+btn('b-anago','search','Analyse starten')+'</div></div>';
-  // Kommentar zum gerade gezeigten Zug
+  // Hinweis bzw. Variantenzeile
   let note;
-  if(S.k>0){
+  if(vr){
+    const e=evCache[fen],num=Math.floor(vr.base/2)+1;
+    const bestTxt=e&&e.best&&!c.game_over()?' · Stockfish empfiehlt <b>'+esc(de(uciToMove(fen,e.best).san))+'</b>':'';
+    const vmoves=vr.moves.map((m,j)=>{const ply=vr.base+j;return (ply%2===0?'<span class="mn">'+(Math.floor(ply/2)+1)+'.</span>':(j===0?'<span class="mn">'+(Math.floor(ply/2)+1)+'…</span>':''))+'<button class="mvb'+(j===vr.idx-1?' cur':'')+'" data-v="'+(j+1)+'">'+esc(de(m))+'</button>'}).join('');
+    note='<div class="card vnote"><div class="card-h" style="margin-bottom:6px"><h3>'+I('swords')+' Variante</h3><span class="small muted">ab Zug '+num+'</span></div>'+
+      '<p class="small">'+(e?'Bewertung: <b>'+fmtEv(g.side==='w'?e.w:-e.w)+'</b> aus deiner Sicht':'<span class="think"></span> Stockfish rechnet …')+bestTxt+'</p>'+
+      (vmoves?'<div class="mvlist vline">'+vmoves+'</div>':'')+
+      '<p class="small muted">Zieh weiter, um die Variante fortzusetzen. Mit dem X in der Zugsteuerung kehrst du zur Partie zurück.</p></div>';
+  }else if(S.k>0){
     const i=S.k-1,mover=i%2===0?'w':'b',who=mover===g.side?'Du':'Bot',san=de(g.moves[i]);
     if(cls){
       const k=CLS[cls[i]];let better='';
       if(['inacc','mist','blund','good'].includes(cls[i])&&an.best[i]){const b=uciToMove(posFen(g,i),an.best[i]);if(b&&b.san!==g.moves[i])better=' Besser war <b>'+esc(de(b.san))+'</b>.'}
       const ucp=g.side==='w'?an.ev[S.k]:-an.ev[S.k];
-      note='<div class="anote">'+badge(cls[i],'big')+'<div><b>'+who+': '+esc(san)+'</b> – '+k.n+'.'+better+'<small>Stellung danach: '+fmtEv(ucp)+' aus deiner Sicht</small></div></div>';
-    }else note='<div class="anote"><div><b>'+who+': '+esc(san)+'</b></div></div>';
-  }else note='<div class="anote"><div class="small muted">Startstellung. Mit den Pfeilen oder den Pfeiltasten durch die Partie gehen.</div></div>';
+      note='<div class="anote"><button class="badgebtn" id="b-why" title="Linie zeigen" aria-label="Erklärung und Linie zeigen">'+badge(cls[i],'big')+'</button><div><b>'+who+': '+esc(san)+'</b> – '+k.n+'.'+better+
+        '<small>Stellung danach: '+fmtEv(ucp)+' aus deiner Sicht · Symbol antippen für die Linie</small></div></div>';
+    }else note='<div class="anote"><div><b>'+who+': '+esc(san)+'</b><small>Du kannst Figuren ziehen und eine eigene Variante ausprobieren.</small></div></div>';
+  }else note='<div class="anote"><div class="small muted">Startstellung. Mit den Pfeilen durch die Partie gehen oder Figuren ziehen, um eine eigene Variante zu spielen.</div></div>';
   // Zusammenfassung je Klasse
   let summary='';
   if(cls){
@@ -1548,30 +1684,43 @@ function renderReview(v,g){
       '<div class="sumr acc"><span>Genauigkeit</span><b>'+(an.acc??'–')+(an.acc!=null?'%':'')+'</b><b>'+(an.accBot??'–')+(an.accBot!=null?'%':'')+'</b></div>'+
       CLS_ORDER.map(k=>'<div class="sumr"><span>'+badge(k)+CLS[k].n+'</span><b>'+cnt(k,g.side)+'</b><b>'+cnt(k,opp)+'</b></div>').join('')+'</div>';
   }
-  const mv=g.moves.map((m,i)=>(i%2===0?'<span class="mn">'+(i/2+1)+'.</span>':'')+'<button class="mvb'+(i===S.k-1?' cur':'')+(cls?' k-'+cls[i]:'')+'" data-k="'+(i+1)+'">'+esc(de(m))+(cls&&!['good','book'].includes(cls[i])?'<i>'+CLS[cls[i]].s+'</i>':'')+'</button>').join('');
-  const nav='<div class="navgrp" role="group" aria-label="Zugsteuerung">'+
-    '<button data-nav="0" title="Zum Anfang" aria-label="Zum Anfang"'+(S.k===0?' disabled':'')+'>'+I('first')+'</button>'+
-    '<button data-nav="-1" title="Ein Zug zurück (Pfeiltaste links)" aria-label="Ein Zug zurück"'+(S.k===0?' disabled':'')+'>'+I('chevL')+'</button>'+
-    '<span class="pos">'+S.k+' / '+n+'</span>'+
-    '<button data-nav="1" title="Ein Zug vor (Pfeiltaste rechts)" aria-label="Ein Zug vor"'+(S.k===n?' disabled':'')+'>'+I('chevR')+'</button>'+
-    '<button data-nav="'+n+'" title="Zum Ende" aria-label="Zum Ende"'+(S.k===n?' disabled':'')+'>'+I('last')+'</button></div>';
+  const mv=g.moves.map((m,i)=>(i%2===0?'<span class="mn">'+(i/2+1)+'.</span>':'')+'<button class="mvb'+(!vr&&i===S.k-1?' cur':'')+(vr&&i===vr.base-1?' base':'')+(cls?' k-'+cls[i]:'')+'" data-k="'+(i+1)+'">'+esc(de(m))+(cls&&!['good','book'].includes(cls[i])?'<i>'+CLS[cls[i]].s+'</i>':'')+'</button>').join('');
+  // Zugsteuerung: in einer Variante erscheint zwischen zurück und vor ein X zum Beenden
+  const atStart=vr?vr.idx===0:S.k===0,atEnd=vr?vr.idx===vr.moves.length:S.k===n;
+  const nav='<div class="navgrp'+(vr?' invar':'')+'" role="group" aria-label="Zugsteuerung">'+
+    '<button data-nav="first" title="'+(vr?'Zum Anfang der Variante':'Zum Anfang')+'" aria-label="'+(vr?'Zum Anfang der Variante':'Zum Anfang')+'"'+(atStart?' disabled':'')+'>'+I('first')+'</button>'+
+    '<button data-nav="prev" title="Ein Zug zurück (Pfeiltaste links)" aria-label="Ein Zug zurück"'+(atStart?' disabled':'')+'>'+I('chevL')+'</button>'+
+    (vr?'<button class="xbtn" id="b-varx" title="Variante beenden, zurück zur Partie" aria-label="Variante beenden">'+I('x')+'</button>'
+       :'<span class="pos">'+S.k+' / '+n+'</span>')+
+    '<button data-nav="next" title="Ein Zug vor (Pfeiltaste rechts)" aria-label="Ein Zug vor"'+(atEnd?' disabled':'')+'>'+I('chevR')+'</button>'+
+    '<button data-nav="last" title="'+(vr?'Zum Ende der Variante':'Zum Ende')+'" aria-label="'+(vr?'Zum Ende der Variante':'Zum Ende')+'"'+(atEnd?' disabled':'')+'>'+I('last')+'</button></div>';
   v.innerHTML='<a class="link" href="#analyse">'+I('arrowL')+'Alle Partien</a>'+
     pageHead(esc(o.name),esc(g.v||'')+' · '+(LEVELS[g.lvl]?LEVELS[g.lvl].n:'')+' · '+fmtDate(g.d),g.side,
       resBadge(g.res)+(an&&an.acc!=null?stat(an.acc+'%','Genauigkeit'):''))+
     state+
     '<div class="stage rv"><div class="boardcol">'+
       matRow('Bot',g.side==='w'?'b':'w',mat)+
-      '<div class="boardwrap'+(an?' ev':'')+'">'+(an?evBar():'')+'<div class="board"></div></div>'+
+      '<div class="boardwrap'+(an||vr?' ev':'')+'">'+(an||vr?evBar():'')+'<div class="board"></div></div>'+
       matRow('Du',g.side,mat)+nav+
-    '</div><div class="panel">'+note+(an?evGraph(g):'')+summary+'<div class="card mvlist">'+mv+'</div></div></div>';
+    '</div><div class="panel">'+note+(cls?whyCard(g,cls):'')+(an?evGraph(g):'')+summary+'<div class="card mvlist">'+mv+'</div></div></div>';
   renderBoard();
-  if(cls&&S.k>0&&S.last){const sq=sqEl(S.last[1]);if(sq)sq.insertAdjacentHTML('beforeend',badge(cls[S.k-1],'sqb'))}
+  boardEl().addEventListener('pointerdown',onDown);
   const on=(id,f)=>{const x=v.querySelector('#'+id);if(x)x.onclick=f};
   on('b-anago',()=>{anaErr='';analyseGame(g.id)});
   on('b-anastop',()=>{if(AJ)AJ.cancel=true});
-  v.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>{const d=+b.dataset.nav;reviewGo(d===1||d===-1?S.k+d:d)});
+  on('b-why',openWhy);on('b-whyx',()=>{TA.why=null;renderAnalyse(true)});
+  on('b-varx',exitVar);
+  const w=TA.why;
+  on('b-wline-a',()=>{if(w&&w.after)playLine(w.i+1,uciLine(w.after.fen,w.after.pv,8))});
+  on('b-wline-b',()=>{if(w&&w.before)playLine(w.i,uciLine(w.before.fen,w.before.pv,8))});
+  v.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>{
+    const d=b.dataset.nav;
+    if(S.vr){varGo(d==='first'?0:d==='last'?S.vr.moves.length:S.vr.idx+(d==='next'?1:-1))}
+    else reviewGo(d==='first'?0:d==='last'?n:S.k+(d==='next'?1:-1));
+  });
   v.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>reviewGo(+b.dataset.k));
-  const ml=v.querySelector('.mvlist'),cur=v.querySelector('.mvb.cur');
+  v.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>varGo(+b.dataset.v));
+  const ml=v.querySelector('.mvlist:not(.vline)'),cur=ml&&ml.querySelector('.mvb.cur');
   if(ml&&cur){const top=cur.offsetTop-ml.offsetTop;if(top<ml.scrollTop||top>ml.scrollTop+ml.clientHeight-30)ml.scrollTop=top-ml.clientHeight/2}
   bindEvGraph(v,g);
 }
@@ -1732,7 +1881,8 @@ document.addEventListener('visibilitychange',()=>{
 window.addEventListener('hashchange',route);
 window.addEventListener('keydown',e=>{
   if(e.key==='Escape'&&T.sel){T.sel=null;renderBoard()}
-  if(T===TA&&TA.gid&&!$('#v-analyse').hidden&&(e.key==='ArrowLeft'||e.key==='ArrowRight')){e.preventDefault();reviewGo(TA.k+(e.key==='ArrowRight'?1:-1))}
+  if(T===TA&&TA.gid&&!$('#v-analyse').hidden&&(e.key==='ArrowLeft'||e.key==='ArrowRight')){e.preventDefault();const d=e.key==='ArrowRight'?1:-1;if(TA.vr)varGo(TA.vr.idx+d);else reviewGo(TA.k+d)}
+  if(T===TA&&TA.vr&&e.key==='Escape'&&!$('#v-analyse').hidden)exitVar();
 });
 let lastMode=null;try{lastMode=localStorage.getItem(SK+'-mode')}catch(e){}
 if(lastMode&&setPool(TT,lastMode)){TT.count=0;nextLine(TT)}
