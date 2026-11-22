@@ -1,4 +1,4 @@
-const C='eroeffnungen-v4';
+const C='eroeffnungen-v5';
 const SHELL=['./','./index.html','./manifest.webmanifest','./icon-180.png','./icon-192.png',
   'https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(SHELL)));self.skipWaiting()});
