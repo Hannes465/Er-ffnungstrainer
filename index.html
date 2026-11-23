@@ -218,6 +218,12 @@ details p{font-size:14px;color:var(--ink-2)}
 .board{container-type:inline-size;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(8,minmax(0,1fr));aspect-ratio:1;width:100%;
   border-radius:10px;overflow:hidden;box-shadow:0 0 0 1px rgba(0,0,0,.35),var(--sh-2)}
 .sq{position:relative;display:flex;align-items:center;justify-content:center}
+.board{position:relative}
+.arrows{position:absolute;inset:0;width:100%;height:100%;z-index:4;pointer-events:none}
+.arrows .a-eng{fill:rgba(47,110,214,.78)}
+.arrows .a-user{fill:rgba(224,132,58,.82)}
+.arrows .a-pre{fill:rgba(224,132,58,.55)}
+.arrows .c-user{fill:none;stroke:rgba(224,132,58,.85);stroke-width:7}
 .sq.l{background:var(--sq-l)}.sq.d{background:var(--sq-d)}
 .sq::before{content:"";position:absolute;inset:0;pointer-events:none}
 .sq.last::before{background:var(--hl-last)}
@@ -1072,6 +1078,7 @@ function renderBoard(){
       (p?'<span class="pc '+p.color+'">'+GLYPH[p.type]+'︎</span>':'')+'</div>';
   }).join('');
   if(T.phase==='review')reviewDecorate();
+  drawOverlay();
 }
 function sqEl(s){return inView('.sq[data-s="'+s+'"]')}
 function flash(s,k){const e=sqEl(s);if(!e)return;e.classList.add(k);setTimeout(()=>e.classList.remove(k),900)}
@@ -1093,13 +1100,67 @@ function squareAt(x,y){
   const c=Math.floor((x-r.left)/r.width*8),w=Math.floor((y-r.top)/r.height*8);
   return squares()[w*8+c];
 }
-let drag=null;
+/* ---------- Pfeile und Kreise auf dem Brett ---------- */
+// Eigene Zeichnungen gelten nur für die Stellung, in der sie gemacht wurden.
+function drawing(){
+  const fen=T.game.fen();
+  if(!T.draw||T.draw.fen!==fen)T.draw={fen,arrows:[],circles:[]};
+  return T.draw;
+}
+function clearDrawing(){const d=drawing();if(d.arrows.length||d.circles.length){d.arrows=[];d.circles=[];drawOverlay()}}
+function toggleArrow(f,t){const d=drawing(),i=d.arrows.findIndex(a=>a.f===f&&a.t===t);if(i>=0)d.arrows.splice(i,1);else d.arrows.push({f,t})}
+function toggleCircle(s){const d=drawing(),i=d.circles.indexOf(s);if(i>=0)d.circles.splice(i,1);else d.circles.push(s)}
+// Bester Zug laut Stockfish (nur im Analysemodus)
+function engineArrow(){
+  if(T!==TA||!TA.gid)return null;
+  const g=gameById(TA.gid);if(!g)return null;
+  let u=null;
+  if(TA.vr){const e=evCache[T.game.fen()];u=e&&e.best}
+  else if(g.an)u=g.an.best[TA.k]||null;
+  return u&&!T.game.game_over()?{f:u.slice(0,2),t:u.slice(2,4)}:null;
+}
+function sqCenter(s){const i=squares().indexOf(s);return [(i%8)*100+50,Math.floor(i/8)*100+50]}
+function arrowPath(f,t){
+  const [x1,y1]=sqCenter(f),[x2,y2]=sqCenter(t),dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy),ux=dx/L,uy=dy/L,px=-uy,py=ux;
+  const sw=8,hw=21,hl=34,s0=22,tipX=x2-ux*12,tipY=y2-uy*12,bx=tipX-ux*hl,by=tipY-uy*hl,ax=x1+ux*s0,ay=y1+uy*s0;
+  const P=(x,y)=>x.toFixed(1)+','+y.toFixed(1);
+  return 'M'+P(ax+px*sw,ay+py*sw)+'L'+P(bx+px*sw,by+py*sw)+'L'+P(bx+px*hw,by+py*hw)+'L'+P(tipX,tipY)+'L'+P(bx-px*hw,by-py*hw)+'L'+P(bx-px*sw,by-py*sw)+'L'+P(ax-px*sw,ay-py*sw)+'Z';
+}
+function arrowsSVG(){
+  const d=drawing(),eng=engineArrow();
+  let s='';
+  if(eng)s+='<path class="a-eng" d="'+arrowPath(eng.f,eng.t)+'"/>';
+  d.circles.forEach(c=>{const [x,y]=sqCenter(c);s+='<circle class="c-user" cx="'+x+'" cy="'+y+'" r="44"/>'});
+  d.arrows.forEach(a=>{s+='<path class="a-user" d="'+arrowPath(a.f,a.t)+'"/>'});
+  if(adraw&&adraw.to&&adraw.to!==adraw.from)s+='<path class="a-user a-pre" d="'+arrowPath(adraw.from,adraw.to)+'"/>';
+  return s?'<svg class="arrows" viewBox="0 0 800 800" aria-hidden="true">'+s+'</svg>':'';
+}
+function drawOverlay(){
+  const el=boardEl();if(!el)return;
+  const old=el.querySelector('svg.arrows');if(old)old.remove();
+  el.insertAdjacentHTML('beforeend',arrowsSVG());
+}
+
+/* ---------- Ziehen, Tippen und Zeichnen ---------- */
+// Züge: Figur ziehen oder antippen.
+// Pfeile: Rechtsklick ziehen (Kreis: Rechtsklick auf ein Feld), Linksklick ziehen ab einem Feld ohne eigene Figur,
+// am Handy: Finger kurz halten, dann ziehen.
+let drag=null,adraw=null,pressT=null,tapClear=false;
+function startArrow(s,kind){adraw={from:s,to:s,kind};drawOverlay()}
 function onDown(e){
   if(T.phase==='review'&&e.target.closest('.sqb')){e.preventDefault();openWhy();return}
-  const s=squareAt(e.clientX,e.clientY);if(!s||!userTurn(T))return;
-  const p=T.game.get(s),mc=T.phase==='review'?T.game.turn():T.side; // im Analysemodus zieht die Seite am Zug
-  if(T.sel&&s!==T.sel&&!(p&&p.color===mc)){tryMove(T.sel,s);return}
-  if(!p||p.color!==mc){T.sel=null;renderBoard();return}
+  const s=squareAt(e.clientX,e.clientY);if(!s)return;
+  if(e.pointerType==='mouse'&&e.button===2){e.preventDefault();startArrow(s,'right');return}
+  if(e.pointerType==='mouse'&&e.button!==0)return;
+  const touch=e.pointerType!=='mouse';
+  if(touch){clearTimeout(pressT);pressT=setTimeout(()=>longPress(s),380)}
+  const can=userTurn(T),p=T.game.get(s),mc=T.phase==='review'?T.game.turn():T.side; // im Analysemodus zieht die Seite am Zug
+  if(can&&T.sel&&s!==T.sel&&!(p&&p.color===mc)){clearTimeout(pressT);tryMove(T.sel,s);return}
+  if(!can||!p||p.color!==mc){
+    if(T.sel){T.sel=null;renderBoard()}
+    if(!touch){e.preventDefault();startArrow(s,'left')}else tapClear=true;
+    return;
+  }
   e.preventDefault();
   const wasSel=T.sel===s;
   T.sel=s;renderBoard();
@@ -1110,15 +1171,35 @@ function onDown(e){
   document.body.appendChild(ghost);src.classList.add('lift');
   drag={from:s,ghost,src,wasSel,moved:false,x:e.clientX,y:e.clientY};
 }
+// Handy: lange gedrückt halten startet einen Pfeil statt eines Zugs
+function longPress(s){
+  pressT=null;tapClear=false;
+  if(drag){if(drag.moved)return;drag.ghost.remove();drag.src.classList.remove('lift');drag=null;T.sel=null;renderBoard()}
+  if(navigator.vibrate)try{navigator.vibrate(12)}catch(e){}
+  startArrow(s,'long');
+}
 window.addEventListener('pointermove',e=>onMove(e));
 window.addEventListener('pointerup',e=>onUp(e));
 window.addEventListener('pointercancel',e=>onUp(e));
+document.addEventListener('contextmenu',e=>{if(e.target.closest('.board'))e.preventDefault()});
 function onMove(e){
+  if(adraw){const s=squareAt(e.clientX,e.clientY);if(s&&s!==adraw.to){adraw.to=s;drawOverlay()}return}
   if(!drag)return;
-  if(Math.abs(e.clientX-drag.x)+Math.abs(e.clientY-drag.y)>6)drag.moved=true;
+  if(Math.abs(e.clientX-drag.x)+Math.abs(e.clientY-drag.y)>6){drag.moved=true;clearTimeout(pressT);pressT=null}
   drag.ghost.style.left=e.clientX+'px';drag.ghost.style.top=e.clientY+'px';
 }
 function onUp(e){
+  clearTimeout(pressT);pressT=null;
+  if(tapClear&&!adraw){tapClear=false;clearDrawing()}
+  tapClear=false;
+  if(adraw){
+    const a=adraw;adraw=null;
+    const s=squareAt(e.clientX,e.clientY)||a.to;
+    if(s!==a.from)toggleArrow(a.from,s);
+    else if(a.kind==='left')clearDrawing(); // einfacher Klick auf ein leeres Feld räumt auf
+    else toggleCircle(s);
+    drawOverlay();return;
+  }
   if(!drag)return;
   const d=drag;drag=null;d.ghost.remove();d.src.classList.remove('lift');
   const s=squareAt(e.clientX,e.clientY);
@@ -1673,7 +1754,7 @@ function renderReview(v,g){
       if(['inacc','mist','blund','good'].includes(cls[i])&&an.best[i]){const b=uciToMove(posFen(g,i),an.best[i]);if(b&&b.san!==g.moves[i])better=' Besser war <b>'+esc(de(b.san))+'</b>.'}
       const ucp=g.side==='w'?an.ev[S.k]:-an.ev[S.k];
       note='<div class="anote"><button class="badgebtn" id="b-why" title="Linie zeigen" aria-label="Erklärung und Linie zeigen">'+badge(cls[i],'big')+'</button><div><b>'+who+': '+esc(san)+'</b> – '+k.n+'.'+better+
-        '<small>Stellung danach: '+fmtEv(ucp)+' aus deiner Sicht · Symbol antippen für die Linie</small></div></div>';
+        '<small>Stellung danach: '+fmtEv(ucp)+' aus deiner Sicht · Symbol antippen für die Linie · blauer Pfeil = bester Zug</small></div></div>';
     }else note='<div class="anote"><div><b>'+who+': '+esc(san)+'</b><small>Du kannst Figuren ziehen und eine eigene Variante ausprobieren.</small></div></div>';
   }else note='<div class="anote"><div class="small muted">Startstellung. Mit den Pfeilen durch die Partie gehen oder Figuren ziehen, um eine eigene Variante zu spielen.</div></div>';
   // Zusammenfassung je Klasse
